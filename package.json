@@ -7,14 +7,20 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-		"format": "prettier --write .",
+    "format": "prettier --write .",
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv ./cloudflare-env.d.ts"
   },
   "dependencies": {
+    "@auth/prisma-adapter": "1.3.0",
     "@opennextjs/cloudflare": "^1.3.0",
+    "@prisma/adapter-d1": "^6.10.1",
+    "@simplewebauthn/browser": "9.0.1",
+    "@simplewebauthn/server": "9.0.3",
     "next": "15.3.4",
+    "next-auth": "5.0.0-beta.8",
+    "prisma": "^6.10.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

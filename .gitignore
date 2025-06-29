@@ -1,4 +1,6 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+repomix-output.xml
+tmp*
+.env
 
 # dependencies
 /node_modules
@@ -41,3 +43,5 @@ next-env.d.ts
 # wrangler files
 .wrangler
 .dev.vars*
+
+/generated/prisma

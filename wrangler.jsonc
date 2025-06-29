@@ -27,6 +27,13 @@
    * databases, object storage, AI inference, real-time communication and more.
    * https://developers.cloudflare.com/workers/runtime-apis/bindings/
    */
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "jer-app-db",
+      "database_id": "8271904d-f2fb-416c-9c67-d57875970801",
+    },
+  ],
 
   /**
    * Environment Variables
