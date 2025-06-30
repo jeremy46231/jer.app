@@ -1,5 +1,6 @@
 import { requireAuth } from './auth'
 import { getLinks, createLink, getLinkWithContent } from './db'
+import { getGofileContents, uploadToGofile } from './gofile'
 
 export default {
   async fetch(request, env, ctx): Promise<Response> {
@@ -18,6 +19,18 @@ export default {
       }
 
       switch (url.pathname) {
+        case '/api/test':
+          const file = new Blob(['Hello, world!'], {
+            type: 'text/plain',
+          })
+          const link = await uploadToGofile(file, 'test file.txt')
+          console.log('Gofile link:', link)
+          const stream = await getGofileContents(link)
+          return new Response(stream, {
+            headers: {
+              'Content-Type': 'text/plain',
+            },
+          })
         case '/api/links':
           if (request.method === 'GET') {
             try {
