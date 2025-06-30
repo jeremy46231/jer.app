@@ -225,10 +225,21 @@ async function renderLinks() {
           `
           break
         case 'inline_file':
+          row.innerHTML += html`
+            <td>
+              <a href=${linkURL} target="_blank">
+                <code>${link.filename}</code>
+              </a>
+              ${' '}(${link.contentType})
+            </td>
+          `
+          break
         case 'attachment_file':
           row.innerHTML += html`
             <td>
-              <a href=${linkURL}><code>${link.filename}</code></a>
+              <a href=${link.url} target="_blank">
+                <code>${link.filename}</code>
+              </a>
               ${' '}(${link.contentType})
             </td>
           `

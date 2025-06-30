@@ -125,15 +125,20 @@ export default {
               },
             })
           case 'attachment_file':
-            if (link.url.startsWith('https://gofile.io/d/')) {
-              const fileStream = await getGofileContents(link.url)
-              return new Response(fileStream, {
-                headers: {
-                  'Content-Type': link.contentType,
-                  'Content-Disposition': `attachment; filename="${link.filename}"`,
-                },
-              })
+            try {
+              if (link.url.startsWith('https://gofile.io/d/')) {
+                const fileStream = await getGofileContents(link.url)
+                return new Response(fileStream, {
+                  headers: {
+                    'Content-Type': link.contentType,
+                    'Content-Disposition': `attachment; filename="${link.filename}"`,
+                  },
+                })
+              }
+            } catch (error) {
+              console.error('Error fetching Gofile contents:', error)
             }
+            // If there's no special handling for the URL, just redirect
             return Response.redirect(link.url, 307)
           default:
             return new Response('Unsupported link type', { status: 500 })
