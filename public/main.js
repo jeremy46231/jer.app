@@ -206,16 +206,6 @@ async function renderLinks() {
     }
 
     links.forEach((link) => {
-      let value = ''
-      switch (link.type) {
-        case 'redirect':
-          value = html`<a href="${link.url}" target="_blank">${link.url}</a>`
-          break
-        case 'inline_file':
-        case 'attachment_file':
-          value = html`<code>${link.filename}</code> (${link.contentType})`
-          break
-      }
       const row = document.createElement('tr')
       row.innerHTML = html`
         <td>
@@ -224,16 +214,37 @@ async function renderLinks() {
           </a>
         </td>
         <td><code>${link.type}</code></td>
-        <td>${value}</td>
       `
+      switch (link.type) {
+        case 'redirect':
+          row.innerHTML += html`
+            <td>
+              <a href="${link.url}" target="_blank">${link.url}</a>
+            </td>
+          `
+          break
+        case 'inline_file':
+        case 'attachment_file':
+          row.innerHTML += html`
+            <td><code>${link.filename}</code> (${link.contentType})</td>
+          `
+          break
+        default:
+          // @ts-ignore
+          console.warn(`Unknown link type: ${link.type}`)
+          row.innerHTML += html`<td style="color: red;">Unknown type</td>`
+          break
+      }
       linksTableBody.appendChild(row)
     })
   } catch (error) {
     console.error('Failed to render links:', error)
     const errorMessage = error instanceof Error ? error.message : String(error)
     const row = document.createElement('tr')
-    row.innerHTML = `
-      <td colspan="3" style="color: red;">Error loading links: ${errorMessage}</td>
+    row.innerHTML = html`
+      <td colspan="3" style="text-align: center; color: red;">
+        Error loading links: ${errorMessage}
+      </td>
     `
     linksTableBody.appendChild(row)
   }

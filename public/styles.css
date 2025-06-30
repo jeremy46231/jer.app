@@ -7,6 +7,13 @@ body {
   padding: 1rem;
 }
 
+h1 {
+  margin-bottom: 1rem;
+}
+section {
+  margin-bottom: 2rem;
+}
+
 .form-group {
   margin-bottom: 1rem;
 }
@@ -21,13 +28,12 @@ select {
   width: 100%;
   padding: 0.5rem;
 }
+input[type=file] {
+  padding: 0.25rem;
+}
 
 .type-fields {
   margin-left: 1rem;
-}
-
-.form-actions {
-  margin-top: 1rem;
 }
 
 button {

@@ -13,15 +13,10 @@
     <!-- Add Link Form -->
     <section class="add-link-section">
       <h2>Add New Link</h2>
-      <form id="add-link-form" class="link-form">
+      <form id="add-link-form">
         <div class="form-group">
           <label for="path">Path:</label>
-          <input
-            type="text"
-            id="path"
-            name="path"
-            required
-          />
+          <input type="text" id="path" name="path" required />
         </div>
 
         <div class="form-group">
@@ -60,14 +55,11 @@
           </div>
         </div>
 
-        <div class="form-actions">
-          <button type="submit">Create Link</button>
-          <button type="reset">Clear Form</button>
-        </div>
+        <button type="submit">Create Link</button>
       </form>
     </section>
 
-    <section class="links-section">
+    <section>
       <h2>Links</h2>
       <table class="links-table">
         <thead>
