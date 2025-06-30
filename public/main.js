@@ -70,7 +70,9 @@ async function handleFormSubmit(event) {
 
   // Show loading state
   /** @type {HTMLButtonElement} */
-  const submitButtonElement = any(addLinkForm.querySelector('button[type="submit"]'))
+  const submitButtonElement = any(
+    addLinkForm.querySelector('button[type="submit"]')
+  )
   if (!submitButtonElement) return
 
   const originalText = submitButtonElement.textContent
@@ -274,18 +276,10 @@ async function renderLinks() {
       const row = document.createElement('tr')
       row.innerHTML = html`
         <td>
-          <button class="delete-btn" title="Delete link">❌</button>
-        </td>
-        <td>
           <a href=${linkURL} target="_blank">${displayURL}</a>
         </td>
         <td><code>${link.type}</code></td>
       `
-      /** @type {HTMLButtonElement} */
-      const deleteButton = assertAny(row.querySelector('.delete-btn'))
-      deleteButton.addEventListener('click', () => {
-        handleDeleteLink(link.path)
-      })
       switch (link.type) {
         case 'redirect':
           row.insertAdjacentHTML(
@@ -329,6 +323,22 @@ async function renderLinks() {
           row.innerHTML += html`<td style="color: red;">Unknown type</td>`
           break
       }
+
+      // Add delete button as the last column
+      row.insertAdjacentHTML(
+        'beforeend',
+        html`
+          <td>
+            <button class="delete-btn" title="Delete link">❌</button>
+          </td>
+        `
+      )
+
+      /** @type {HTMLButtonElement} */
+      const deleteButton = assertAny(row.querySelector('.delete-btn'))
+      deleteButton.addEventListener('click', () => {
+        handleDeleteLink(link.path)
+      })
       linksTableBody.appendChild(row)
     })
   } catch (error) {
