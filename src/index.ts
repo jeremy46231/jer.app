@@ -52,32 +52,51 @@ export default {
               } else if (contentType.includes('multipart/form-data')) {
                 // Handle files
                 const formData = await request.formData()
-                const path = formData.get('path') as string
-                const type = formData.get('type') as string
-                const file = formData.get('file') as File
-                const filename = formData.get('filename') as string
+                const path = formData.get('path')
+                const type = formData.get('type')
+                const file = formData.get('file')
+                const filename = formData.get('filename')
 
-                if (!path || !type || !file || type !== 'inline_file') {
-                  return new Response('Missing required fields', {
-                    status: 400,
-                  })
+                if (
+                  typeof path !== 'string' ||
+                  typeof type !== 'string' ||
+                  !(file instanceof Blob) ||
+                  typeof filename !== 'string'
+                ) {
+                  return new Response('Invalid form data', { status: 400 })
                 }
 
-                const fileBuffer = await file.arrayBuffer()
-                const fileData = new Uint8Array(fileBuffer)
-                const finalFilename = filename || file.name
+                if (type === 'inline_file') {
+                  const fileBuffer = await file.arrayBuffer()
+                  const fileData = new Uint8Array(fileBuffer)
+                  const finalFilename = filename || file.name
 
-                await createLink(env.DB, {
-                  path,
-                  type: type,
-                  file: fileData,
-                  contentType: file.type,
-                  filename: finalFilename,
-                })
+                  await createLink(env.DB, {
+                    path,
+                    type: type,
+                    file: fileData,
+                    contentType: file.type,
+                    filename: finalFilename,
+                  })
 
-                return new Response('Link created successfully', {
-                  status: 201,
-                })
+                  return new Response('Link created successfully', {
+                    status: 201,
+                  })
+                }
+                if (type === 'attachment_file') {
+                  const downloadLink = await uploadToGofile(file, filename)
+                  await createLink(env.DB, {
+                    path,
+                    type: type,
+                    url: downloadLink,
+                    contentType: file.type,
+                    filename: filename,
+                  })
+
+                  return new Response('Link created successfully', {
+                    status: 201,
+                  })
+                }
               } else {
                 return new Response('Unsupported content type', { status: 400 })
               }
@@ -105,6 +124,17 @@ export default {
                 'Content-Disposition': `inline; filename="${link.filename}"`,
               },
             })
+          case 'attachment_file':
+            if (link.url.startsWith('https://gofile.io/d/')) {
+              const fileStream = await getGofileContents(link.url)
+              return new Response(fileStream, {
+                headers: {
+                  'Content-Type': link.contentType,
+                  'Content-Disposition': `attachment; filename="${link.filename}"`,
+                },
+              })
+            }
+            return Response.redirect(link.url, 307)
           default:
             return new Response('Unsupported link type', { status: 500 })
         }

@@ -12,6 +12,7 @@ export type InlineFileLink = GenericLink & {
 }
 export type AttachmentFileLink = GenericLink & {
   type: 'attachment_file'
+  url: string
   contentType: string
   filename: string
 }
@@ -21,13 +22,10 @@ export type Link = RedirectLink | InlineFileLink | AttachmentFileLink
 export type InlineFileLinkWithContent = InlineFileLink & {
   file: Uint8Array
 }
-export type AttachmentFileLinkWithContent = AttachmentFileLink & {
-  file: Uint8Array
-}
 export type LinkWithContent =
   | RedirectLink
   | InlineFileLinkWithContent
-  | AttachmentFileLinkWithContent
+  | AttachmentFileLink
 
 export async function getLinks(db: D1Database): Promise<Link[]> {
   const result = await db
@@ -72,6 +70,7 @@ export async function getLinks(db: D1Database): Promise<Link[]> {
         return {
           ...generalAttributes,
           type: 'attachment_file',
+          url: row.url!,
           contentType: row.content_type!,
           filename: row.filename!,
         } satisfies AttachmentFileLink
@@ -129,6 +128,15 @@ export async function getLinkWithContent(
         file: row.file ? new Uint8Array(row.file) : new Uint8Array(),
       } satisfies InlineFileLinkWithContent
 
+    case 'attachment_file':
+      return {
+        ...generalAttributes,
+        type: 'attachment_file',
+        url: row.url!,
+        contentType: row.content_type!,
+        filename: row.filename!,
+      } satisfies AttachmentFileLink
+
     default:
       throw new Error(`Unknown link type: ${row.type}`)
   }
@@ -141,28 +149,34 @@ export async function createLink(
   const { path, type } = linkData
 
   if (type === 'redirect') {
-    const redirectData = linkData
     await db
       .prepare(
         `
-        INSERT INTO links (path, type, url)
-        VALUES (?, ?, ?)
-      `
+          INSERT INTO links (path, type, url)
+          VALUES (?, ?, ?)
+        `
       )
-      .bind(path, type, redirectData.url)
+      .bind(path, type, linkData.url)
       .run()
-  } else if (type === 'inline_file' || type === 'attachment_file') {
-    const fileData = linkData as
-      | InlineFileLinkWithContent
-      | AttachmentFileLinkWithContent
+  } else if (type === 'inline_file') {
     await db
       .prepare(
         `
-        INSERT INTO links (path, type, file, content_type, filename)
-        VALUES (?, ?, ?, ?, ?)
-      `
+          INSERT INTO links (path, type, file, content_type, filename)
+          VALUES (?, ?, ?, ?, ?)
+        `
       )
-      .bind(path, type, fileData.file, fileData.contentType, fileData.filename)
+      .bind(path, type, linkData.file, linkData.contentType, linkData.filename)
+      .run()
+  } else if (type === 'attachment_file') {
+    await db
+      .prepare(
+        `
+          INSERT INTO links (path, type, url, content_type, filename)
+          VALUES (?, ?, ?, ?, ?)
+        `
+      )
+      .bind(path, type, linkData.url, linkData.contentType, linkData.filename)
       .run()
   } else {
     throw new Error(`Unsupported link type: ${type}`)

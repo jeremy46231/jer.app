@@ -40,6 +40,7 @@ function handleTypeChange() {
       urlInput.required = true
       break
     case 'inline_file':
+    case 'attachment_file':
       fileFields.style.display = 'block'
       fileInput.required = true
       break
