@@ -1,53 +1,13 @@
-const encoder = new TextEncoder()
-function timingSafeEqual(a: string, b: string) {
-  const aBytes = encoder.encode(a)
-  const bBytes = encoder.encode(b)
-
-  if (aBytes.byteLength !== bBytes.byteLength) {
-    return false
-  }
-
-  return crypto.subtle.timingSafeEqual(aBytes, bBytes)
-}
-
-function unauthorized(text = 'Unauthorized'): Response {
-  return new Response(text, {
-    status: 401,
-    headers: {
-      'WWW-Authenticate': 'Basic realm="Restricted Area"',
-    },
-  })
-}
-
-function requireAuth(request: Request): Response | true {
-  const authHeader = request.headers.get('Authorization')
-  if (!authHeader) {
-    return unauthorized()
-  }
-  const [scheme, encoded] = authHeader.split(' ')
-  if (scheme !== 'Basic' || !encoded) {
-    return unauthorized('Invalid Authorization Scheme')
-  }
-  const decoded = atob(encoded)
-  const colonIndex = decoded.indexOf(':')
-  if (colonIndex === -1) {
-    return unauthorized('Invalid Credentials Format')
-  }
-  const username = decoded.slice(0, colonIndex)
-  const password = decoded.slice(colonIndex + 1)
-  if (
-    !timingSafeEqual(username, 'jeremy') ||
-    !timingSafeEqual(password, '123')
-  ) {
-    return unauthorized('Invalid Username or Password')
-  }
-  return true
-}
+import { requireAuth } from './auth'
+import { getLinks } from './db'
 
 export default {
   async fetch(request, env, ctx): Promise<Response> {
     const url = new URL(request.url)
     if (url.pathname === '/') {
+      if (env.WORKER_ENV === 'development') {
+        return Response.redirect(new URL('/dash', request.url), 303)
+      }
       return Response.redirect('https://jeremywoolley.com', 308)
     }
     if (url.pathname.startsWith('/api/')) {
@@ -56,14 +16,20 @@ export default {
         return authResponse
       }
 
-      switch (url.pathname.replace('/api/', '')) {
-        case 'hello':
-          return new Response(JSON.stringify({ message: 'Hello, World!' }), {
-            headers: {
-              'Content-Type': 'application/json',
-              'Cache-Control': 'no-store',
-            },
-          })
+      switch (url.pathname) {
+        case '/api/links':
+          if (request.method !== 'GET') {
+            return new Response('Method Not Allowed', { status: 405 })
+          }
+          try {
+            const links = await getLinks(env.DB)
+            return new Response(JSON.stringify(links), {
+              headers: { 'Content-Type': 'application/json' },
+            })
+          } catch (error) {
+            console.error('Error fetching links:', error)
+            return new Response('Internal Server Error', { status: 500 })
+          }
       }
     }
     return new Response('Not Found', { status: 404 })

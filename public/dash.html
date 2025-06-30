@@ -4,17 +4,25 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>jer.app</title>
+
+    <script type="module" src="main.js"></script>
   </head>
   <body>
-    <h1>dash</h1>
-    <script type="module">
-      const response = await fetch('/api/hello')
-      if (response.ok) {
-        const data = await response.json()
-        document.body.innerHTML += `<p>${data.message}</p>`
-      } else {
-        document.body.innerHTML += `<p>Error: ${response.status} ${response.statusText}</p>`
-      }
-    </script>
+    <h1>jer.app dashboard</h1>
+    <table class="links-table">
+      <thead>
+        <tr>
+          <th>Path</th>
+          <th>Type</th>
+          <th>Value</th>
+        </tr>
+      </thead>
+      <tbody id="links-tbody">
+        <!-- Links will be populated here by main.js -->
+        <tr>
+          <td colspan="3">Loading links...</td>
+        </tr>
+      </tbody>
+    </table>
   </body>
 </html>
