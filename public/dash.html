@@ -30,7 +30,7 @@
         </div>
 
         <!-- Redirect-specific fields -->
-        <div id="redirect-fields" class="type-fields" style="display: none">
+        <div id="redirect-fields" style="display: none">
           <div class="form-group">
             <label for="url">URL:</label>
             <input
@@ -43,7 +43,7 @@
         </div>
 
         <!-- File-specific fields -->
-        <div id="file-fields" class="type-fields" style="display: none">
+        <div id="file-fields" style="display: none">
           <div class="form-group">
             <label for="file">File:</label>
             <input type="file" id="file" name="file" />
@@ -61,22 +61,24 @@
 
     <section>
       <h2>Links</h2>
-      <table class="links-table">
-        <thead>
-          <tr>
-            <th>Path</th>
-            <th>Type</th>
-            <th>Value</th>
-          </tr>
-        </thead>
-        <tbody id="links-tbody">
-          <tr>
-            <td colspan="3" style="text-align: center; color: #666">
-              Loading links...
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="links-table-wrapper">
+        <table class="links-table">
+          <thead>
+            <tr>
+              <th>Path</th>
+              <th>Type</th>
+              <th>Value</th>
+            </tr>
+          </thead>
+          <tbody id="links-tbody">
+            <tr>
+              <td colspan="3" style="text-align: center; color: #666">
+                Loading links...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </section>
   </body>
 </html>

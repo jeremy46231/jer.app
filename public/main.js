@@ -206,12 +206,12 @@ async function renderLinks() {
     }
 
     links.forEach((link) => {
+      const displayURL = `jer.app/${link.path}`
+      const linkURL = new URL(`/${link.path}`, window.location.href)
       const row = document.createElement('tr')
       row.innerHTML = html`
         <td>
-          <a href="https://jer.app/${link.path}" target="_blank">
-            jer.app/${link.path}
-          </a>
+          <a href=${linkURL} target="_blank">${displayURL}</a>
         </td>
         <td><code>${link.type}</code></td>
       `
@@ -226,7 +226,10 @@ async function renderLinks() {
         case 'inline_file':
         case 'attachment_file':
           row.innerHTML += html`
-            <td><code>${link.filename}</code> (${link.contentType})</td>
+            <td>
+              <a href=${linkURL}><code>${link.filename}</code></a>
+              ${' '}(${link.contentType})
+            </td>
           `
           break
         default:

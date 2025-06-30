@@ -2,9 +2,7 @@ body {
   font-family: system-ui, sans-serif;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
-  max-width: 50rem;
-  margin: 0 auto;
-  padding: 1rem;
+  padding: 1rem 2rem;
 }
 
 h1 {
@@ -13,7 +11,9 @@ h1 {
 section {
   margin-bottom: 2rem;
 }
-
+.add-link-section {
+  max-width: 30rem;
+}
 .form-group {
   margin-bottom: 1rem;
 }
@@ -28,17 +28,14 @@ select {
   width: 100%;
   padding: 0.5rem;
 }
-input[type=file] {
+input[type='file'] {
   padding: 0.25rem;
-}
-
-.type-fields {
-  margin-left: 1rem;
 }
 
 button {
   padding: 0.5rem 1rem;
   margin-right: 1rem;
+  margin-top: 0.5rem;
   border: 1px solid #ccc;
   border-radius: 4px;
   background: white;
@@ -50,10 +47,15 @@ button[type='submit'] {
   border-color: #007bff;
 }
 
+.links-table-wrapper {
+  max-width: 100%;
+  overflow-x: auto;
+}
 .links-table {
   width: 100%;
-  border-collapse: collapse;
   margin-top: 20px;
+  border-collapse: collapse;
+  white-space: nowrap;
 }
 .links-table th,
 .links-table td {

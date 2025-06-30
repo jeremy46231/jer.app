@@ -1,5 +1,5 @@
 import { requireAuth } from './auth'
-import { getLinks, createLink } from './db'
+import { getLinks, createLink, getLinkWithContent } from './db'
 
 export default {
   async fetch(request, env, ctx): Promise<Response> {
@@ -10,6 +10,7 @@ export default {
       }
       return Response.redirect('https://jeremywoolley.com', 308)
     }
+
     if (url.pathname.startsWith('/api/')) {
       const authResponse = requireAuth(request, env)
       if (authResponse !== true) {
@@ -87,6 +88,29 @@ export default {
             return new Response('Method Not Allowed', { status: 405 })
           }
       }
+    }
+
+    const path = url.pathname.slice(1)
+    try {
+      const link = await getLinkWithContent(env.DB, path)
+      if (link) {
+        switch (link.type) {
+          case 'redirect':
+            return Response.redirect(link.url, 302)
+          case 'inline_file':
+            return new Response(link.file, {
+              headers: {
+                'Content-Type': link.contentType,
+                'Content-Disposition': `inline; filename="${link.filename}"`,
+              },
+            })
+          default:
+            return new Response('Unsupported link type', { status: 500 })
+        }
+      }
+    } catch (error) {
+      console.error('Error serving link:', error)
+      return new Response('Internal Server Error', { status: 500 })
     }
 
     return new Response('Not Found', { status: 404 })
