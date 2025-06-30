@@ -2,6 +2,8 @@ export async function uploadToGofile(
   file: ReadableStream | Blob | string,
   filename: string
 ): Promise<string> {
+  // https://gofile.io/api
+  
   if (typeof file === 'string') {
     file = new Blob([file], { type: 'text/plain' })
   }
@@ -68,6 +70,12 @@ export async function uploadToGofile(
 export async function getGofileContents(
   url: string
 ): Promise<ReadableStream<Uint8Array<ArrayBufferLike>>> {
+  // We must obtain a guest token from the accounts endpoint,
+  // then use that token and the webToken from the global.js script
+  // to access the contents route. Accessing the contents route
+  // with a token also authorizes that token to download the file
+  // from the direct link.
+
   const folderCode = url.replace('https://gofile.io/d/', '')
 
   const accountsResponse = await fetch('https://api.gofile.io/accounts', {

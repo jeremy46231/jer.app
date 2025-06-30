@@ -36,3 +36,27 @@ export function querySelector(selector) {
   }
   return element
 }
+
+/** 
+ * Asserts that the value is truthy.
+ * Returns the value typed to exclude falsy types.
+ * @template T
+ * @param {T} value
+ * @returns {Omit<T, undefined | null | false | 0 | ''>}
+ */
+export function assert(value) {
+  if (!value) {
+    throw new Error('Value is falsy')
+  }
+  return value
+}
+
+/** 
+ * Asserts that the value is truthy and returns it as
+ * any, so you can override
+ * @param {unknown} value
+ * @returns {any}
+ */
+export function assertAny(value) {
+  return assert(value)
+}

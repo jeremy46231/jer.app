@@ -1,4 +1,4 @@
-import { getElementById, html } from './utils.js'
+import { assertAny, getElementById, html } from './utils.js'
 /**
  * @typedef {import('../src/db.ts').Link} Link
  */
@@ -137,6 +137,38 @@ async function handleFormSubmit(event) {
 }
 
 /**
+ * Handles deleting a link
+ * @param {string} path
+ */
+async function handleDeleteLink(path) {
+  if (!confirm(`Are you sure you want to delete the link "jer.app/${path}"?`)) {
+    return
+  }
+
+  try {
+    const response = await fetch(
+      `/api/links?path=${encodeURIComponent(path)}`,
+      {
+        method: 'DELETE',
+      }
+    )
+
+    if (response.ok) {
+      showMessage(`Link "jer.app/${path}" deleted successfully!`, 'success')
+    } else {
+      const errorText = await response.text()
+      showMessage(`Error deleting link: ${errorText}`, 'error')
+    }
+    await renderLinks()
+  } catch (error) {
+    console.error('Error deleting link:', error)
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error occurred'
+    showMessage(`Error deleting link: ${errorMessage}`, 'error')
+  }
+}
+
+/**
  * Shows a message to the user
  * @param {string} message
  * @param {'success' | 'error'} type
@@ -184,7 +216,7 @@ async function getLinks() {
 async function renderLinks() {
   linksTableBody.innerHTML = html`
     <tr>
-      <td colspan="3" style="text-align: center; color: #666;">
+      <td colspan="4" style="text-align: center; color: #666;">
         Loading links...
       </td>
     </tr>
@@ -198,7 +230,7 @@ async function renderLinks() {
     if (links.length === 0) {
       linksTableBody.innerHTML = html`
         <tr>
-          <td colspan="3" style="text-align: center; color: #666;">
+          <td colspan="4" style="text-align: center; color: #666;">
             No links found
           </td>
         </tr>
@@ -212,37 +244,54 @@ async function renderLinks() {
       const row = document.createElement('tr')
       row.innerHTML = html`
         <td>
+          <button class="delete-btn" title="Delete link">❌</button>
+        </td>
+        <td>
           <a href=${linkURL} target="_blank">${displayURL}</a>
         </td>
         <td><code>${link.type}</code></td>
       `
+      /** @type {HTMLButtonElement} */
+      const deleteButton = assertAny(row.querySelector('.delete-btn'))
+      deleteButton.addEventListener('click', () => {
+        handleDeleteLink(link.path)
+      })
       switch (link.type) {
         case 'redirect':
-          row.innerHTML += html`
-            <td>
-              <a href="${link.url}" target="_blank">${link.url}</a>
-            </td>
-          `
+          row.insertAdjacentHTML(
+            'beforeend',
+            html`
+              <td>
+                <a href="${link.url}" target="_blank">${link.url}</a>
+              </td>
+            `
+          )
           break
         case 'inline_file':
-          row.innerHTML += html`
-            <td>
-              <a href=${linkURL} target="_blank">
-                <code>${link.filename}</code>
-              </a>
-              ${' '}(${link.contentType})
-            </td>
-          `
+          row.insertAdjacentHTML(
+            'beforeend',
+            html`
+              <td>
+                <a href=${linkURL} target="_blank">
+                  <code>${link.filename}</code>
+                </a>
+                ${' '}(${link.contentType})
+              </td>
+            `
+          )
           break
         case 'attachment_file':
-          row.innerHTML += html`
-            <td>
-              <a href=${link.url} target="_blank">
-                <code>${link.filename}</code>
-              </a>
-              ${' '}(${link.contentType})
-            </td>
-          `
+          row.insertAdjacentHTML(
+            'beforeend',
+            html`
+              <td>
+                <a href=${link.url} target="_blank">
+                  <code>${link.filename}</code>
+                </a>
+                ${' '}(${link.contentType})
+              </td>
+            `
+          )
           break
         default:
           // @ts-ignore
@@ -257,7 +306,7 @@ async function renderLinks() {
     const errorMessage = error instanceof Error ? error.message : String(error)
     const row = document.createElement('tr')
     row.innerHTML = html`
-      <td colspan="3" style="text-align: center; color: red;">
+      <td colspan="4" style="text-align: center; color: red;">
         Error loading links: ${errorMessage}
       </td>
     `

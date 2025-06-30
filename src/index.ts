@@ -1,5 +1,5 @@
 import { requireAuth } from './auth'
-import { getLinks, createLink, getLinkWithContent } from './db'
+import { getLinks, createLink, getLinkWithContent, deleteLink } from './db'
 import { getGofileContents, uploadToGofile } from './gofile'
 
 export default {
@@ -102,6 +102,21 @@ export default {
               }
             } catch (error) {
               console.error('Error creating link:', error)
+              return new Response('Internal Server Error', { status: 500 })
+            }
+          } else if (request.method === 'DELETE') {
+            try {
+              const url = new URL(request.url)
+              const pathToDelete = url.searchParams.get('path')
+              
+              if (!pathToDelete) {
+                return new Response('Path parameter is required', { status: 400 })
+              }
+
+              await deleteLink(env.DB, pathToDelete)
+              return new Response('Link deleted successfully', { status: 200 })
+            } catch (error) {
+              console.error('Error deleting link:', error)
               return new Response('Internal Server Error', { status: 500 })
             }
           } else {

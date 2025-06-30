@@ -182,3 +182,13 @@ export async function createLink(
     throw new Error(`Unsupported link type: ${type}`)
   }
 }
+
+export async function deleteLink(
+  db: D1Database,
+  path: string
+): Promise<void> {
+  await db
+    .prepare('DELETE FROM links WHERE path = ?')
+    .bind(path)
+    .run()
+}
