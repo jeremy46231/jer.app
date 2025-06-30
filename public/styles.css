@@ -20,7 +20,6 @@ section {
 
 label {
   display: block;
-  margin-bottom: 0.5rem;
 }
 
 input,
@@ -29,7 +28,11 @@ select {
   padding: 0.5rem;
 }
 input[type='file'] {
-  padding: 0.25rem;
+  padding: 0.25rem 0;
+}
+input[type='checkbox'] {
+  width: auto;
+  margin-right: 0.5rem;
 }
 
 button {

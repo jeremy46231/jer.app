@@ -129,6 +129,7 @@ export async function handleAPI(
     const contentType = url.searchParams.get('content-type')
     const filename = url.searchParams.get('filename')
     const location = url.searchParams.get('location') as FileLocation | null
+    const download = url.searchParams.get('download') === 'true'
     if (!path || !contentType || !filename || !location) {
       throw new Error('Missing required fields')
     }
@@ -143,6 +144,7 @@ export async function handleAPI(
           file: fileData,
           contentType,
           filename,
+          download,
         })
         return new Response('Link created successfully', { status: 201 })
       case 'gofile':
@@ -157,6 +159,7 @@ export async function handleAPI(
           url: downloadLink,
           contentType,
           filename,
+          download,
         })
         return new Response('Link created successfully', { status: 201 })
       default:

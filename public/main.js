@@ -119,6 +119,7 @@ async function handleFormSubmit(event) {
       let filename = any(formData.get('filename'))
       /** @type {string | undefined} */
       let contentType = any(formData.get('content-type'))
+      const download = formData.get('download') === 'on'
 
       // Use original filename if not provided
       if (!filename || typeof filename !== 'string') {
@@ -135,6 +136,7 @@ async function handleFormSubmit(event) {
       uploadUrl.searchParams.set('content-type', contentType)
       uploadUrl.searchParams.set('filename', filename)
       uploadUrl.searchParams.set('location', location)
+      uploadUrl.searchParams.set('download', download.toString())
 
       const response = await fetch(uploadUrl, {
         method: 'POST',
@@ -292,6 +294,7 @@ async function renderLinks() {
           )
           break
         case 'inline_file':
+          const inlineDownloadText = link.download ? ' (force download)' : ''
           row.insertAdjacentHTML(
             'beforeend',
             html`
@@ -299,12 +302,15 @@ async function renderLinks() {
                 <a href=${linkURL} target="_blank">
                   <code>${link.filename}</code>
                 </a>
-                ${' '}(${link.contentType})
+                ${' '}(${link.contentType})${inlineDownloadText}
               </td>
             `
           )
           break
         case 'attachment_file':
+          const attachmentDownloadText = link.download
+            ? ' (force download)'
+            : ''
           row.insertAdjacentHTML(
             'beforeend',
             html`
@@ -312,7 +318,7 @@ async function renderLinks() {
                 <a href=${link.url} target="_blank">
                   <code>${link.filename}</code>
                 </a>
-                ${' '}(${link.contentType})
+                ${' '}(${link.contentType})${attachmentDownloadText}
               </td>
             `
           )

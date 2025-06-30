@@ -5,16 +5,17 @@ export type RedirectLink = GenericLink & {
   type: 'redirect'
   url: string
 }
-export type InlineFileLink = GenericLink & {
-  type: 'inline_file'
+type FileLink = GenericLink & {
   contentType: string
   filename: string
+  download: boolean
 }
-export type AttachmentFileLink = GenericLink & {
+export type InlineFileLink = FileLink & {
+  type: 'inline_file'
+}
+export type AttachmentFileLink = FileLink & {
   type: 'attachment_file'
   url: string
-  contentType: string
-  filename: string
 }
 export type Link = RedirectLink | InlineFileLink | AttachmentFileLink
 
@@ -31,7 +32,7 @@ export async function getLinks(db: D1Database): Promise<Link[]> {
   const result = await db
     .prepare(
       `
-    SELECT path, type, url, content_type, filename
+    SELECT path, type, url, content_type, filename, download
     FROM links
   `
     )
@@ -43,6 +44,7 @@ export async function getLinks(db: D1Database): Promise<Link[]> {
     url?: string
     content_type?: string
     filename?: string
+    download?: boolean
   }[]
 
   return rows.map((row) => {
@@ -64,6 +66,7 @@ export async function getLinks(db: D1Database): Promise<Link[]> {
           type: 'inline_file',
           contentType: row.content_type!,
           filename: row.filename!,
+          download: row.download!,
         } satisfies InlineFileLink
 
       case 'attachment_file':
@@ -73,6 +76,7 @@ export async function getLinks(db: D1Database): Promise<Link[]> {
           url: row.url!,
           contentType: row.content_type!,
           filename: row.filename!,
+          download: row.download!,
         } satisfies AttachmentFileLink
 
       default:
@@ -88,7 +92,7 @@ export async function getLinkWithContent(
   const result = await db
     .prepare(
       `
-    SELECT path, type, url, file, content_type, filename
+    SELECT path, type, url, file, content_type, filename, download
     FROM links
     WHERE path = ?
   `
@@ -105,6 +109,7 @@ export async function getLinkWithContent(
     file?: ArrayBuffer
     content_type?: string
     filename?: string
+    download?: boolean
   }
 
   const generalAttributes = {
@@ -126,6 +131,7 @@ export async function getLinkWithContent(
         contentType: row.content_type!,
         filename: row.filename!,
         file: row.file ? new Uint8Array(row.file) : new Uint8Array(),
+        download: row.download!,
       } satisfies InlineFileLinkWithContent
 
     case 'attachment_file':
@@ -135,6 +141,7 @@ export async function getLinkWithContent(
         url: row.url!,
         contentType: row.content_type!,
         filename: row.filename!,
+        download: row.download!,
       } satisfies AttachmentFileLink
 
     default:
@@ -162,21 +169,35 @@ export async function createLink(
     await db
       .prepare(
         `
-          INSERT INTO links (path, type, file, content_type, filename)
-          VALUES (?, ?, ?, ?, ?)
+          INSERT INTO links (path, type, file, content_type, filename, download)
+          VALUES (?, ?, ?, ?, ?, ?)
         `
       )
-      .bind(path, type, linkData.file, linkData.contentType, linkData.filename)
+      .bind(
+        path,
+        type,
+        linkData.file,
+        linkData.contentType,
+        linkData.filename,
+        linkData.download
+      )
       .run()
   } else if (type === 'attachment_file') {
     await db
       .prepare(
         `
-          INSERT INTO links (path, type, url, content_type, filename)
-          VALUES (?, ?, ?, ?, ?)
+          INSERT INTO links (path, type, url, content_type, filename, download)
+          VALUES (?, ?, ?, ?, ?, ?)
         `
       )
-      .bind(path, type, linkData.url, linkData.contentType, linkData.filename)
+      .bind(
+        path,
+        type,
+        linkData.url,
+        linkData.contentType,
+        linkData.filename,
+        linkData.download
+      )
       .run()
   } else {
     throw new Error(`Unsupported link type: ${type}`)

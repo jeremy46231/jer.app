@@ -15,10 +15,11 @@ export async function serveLink(
       return Response.redirect(link.url, 302)
 
     case 'inline_file':
+      const disposition = link.download ? 'attachment' : 'inline'
       return new Response(link.file, {
         headers: {
           'Content-Type': link.contentType,
-          'Content-Disposition': `inline; filename="${link.filename}"`,
+          'Content-Disposition': `${disposition}; filename="${link.filename}"`,
         },
       })
 
@@ -26,10 +27,11 @@ export async function serveLink(
       try {
         if (link.url.startsWith('https://gofile.io/d/')) {
           const fileStream = await getGofileContents(link.url)
+          const disposition = link.download ? 'attachment' : 'inline'
           return new Response(fileStream, {
             headers: {
               'Content-Type': link.contentType,
-              'Content-Disposition': `inline; filename="${link.filename}"`,
+              'Content-Disposition': `${disposition}; filename="${link.filename}"`,
             },
           })
         }
