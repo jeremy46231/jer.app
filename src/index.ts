@@ -7,7 +7,7 @@ export default {
     const url = new URL(request.url)
     if (url.pathname === '/') {
       if (env.WORKER_ENV === 'development') {
-        return Response.redirect(new URL('/dash', request.url), 303)
+        return Response.redirect(new URL('/dash', request.url).href, 303)
       }
       return Response.redirect('https://jeremywoolley.com', 308)
     }
@@ -19,18 +19,6 @@ export default {
       }
 
       switch (url.pathname) {
-        case '/api/test':
-          const file = new Blob(['Hello, world!'], {
-            type: 'text/plain',
-          })
-          const link = await uploadToGofile(file, 'test file.txt')
-          console.log('Gofile link:', link)
-          const stream = await getGofileContents(link)
-          return new Response(stream, {
-            headers: {
-              'Content-Type': 'text/plain',
-            },
-          })
         case '/api/links':
           if (request.method === 'GET') {
             try {
