@@ -3,7 +3,7 @@ export async function uploadToGofile(
   filename: string
 ): Promise<string> {
   // https://gofile.io/api
-  
+
   if (typeof file === 'string') {
     file = new Blob([file], { type: 'text/plain' })
   }

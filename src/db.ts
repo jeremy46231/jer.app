@@ -183,12 +183,6 @@ export async function createLink(
   }
 }
 
-export async function deleteLink(
-  db: D1Database,
-  path: string
-): Promise<void> {
-  await db
-    .prepare('DELETE FROM links WHERE path = ?')
-    .bind(path)
-    .run()
+export async function deleteLink(db: D1Database, path: string): Promise<void> {
+  await db.prepare('DELETE FROM links WHERE path = ?').bind(path).run()
 }

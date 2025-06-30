@@ -16,7 +16,15 @@
       <form id="add-link-form">
         <div class="form-group">
           <label for="path">Path:</label>
-          <input type="text" id="path" name="path" required />
+          <p style="white-space: nowrap; width: 100%">
+            jer.app/<input
+              type="text"
+              id="path"
+              name="path"
+              required
+              style="width: 20rem; padding: 0"
+            />
+          </p>
         </div>
 
         <div class="form-group">
@@ -24,8 +32,7 @@
           <select id="type" name="type" required>
             <option value="">Select a type...</option>
             <option value="redirect">Redirect</option>
-            <option value="inline_file">Inline File</option>
-            <option value="attachment_file">Attachment File</option>
+            <option value="file">File</option>
           </select>
         </div>
 
@@ -49,16 +56,25 @@
             <input type="file" id="file" name="file" />
           </div>
           <div class="form-group">
+            <label for="location">Location:</label>
+            <select id="location" name="location">
+              <option value="">Select a location...</option>
+              <option value="inline">Inline in DB</option>
+              <option value="gofile">Gofile.io</option>
+            </select>
+            <label for="location">Where to store the file?</label>
+          </div>
+          <div class="form-group">
             <label for="filename">Filename (optional):</label>
             <input type="text" id="filename" name="filename" />
             <small>Leave empty to use original filename</small>
           </div>
           <div class="form-group">
-            <label for="inline">Content-type (optional):</label>
+            <label for="content-type">Content-type (optional):</label>
             <input
               type="text"
-              id="inline"
-              name="inline"
+              id="content-type"
+              name="content-type"
               list="content-types"
               placeholder="text/plain"
             />

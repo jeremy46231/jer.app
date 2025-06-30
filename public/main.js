@@ -1,4 +1,4 @@
-import { assertAny, getElementById, html } from './utils.js'
+import { any, assertAny, getElementById, html } from './utils.js'
 /**
  * @typedef {import('../src/db.ts').Link} Link
  */
@@ -29,9 +29,12 @@ function handleTypeChange() {
   const urlInput = getElementById('url')
   /** @type {HTMLInputElement} */
   const fileInput = getElementById('file')
+  /** @type {HTMLSelectElement} */
+  const locationSelect = getElementById('location')
 
   urlInput.required = false
   fileInput.required = false
+  locationSelect.required = false
 
   // Show relevant fields and set validation
   switch (selectedType) {
@@ -39,10 +42,10 @@ function handleTypeChange() {
       redirectFields.style.display = 'block'
       urlInput.required = true
       break
-    case 'inline_file':
-    case 'attachment_file':
+    case 'file':
       fileFields.style.display = 'block'
       fileInput.required = true
+      locationSelect.required = true
       break
   }
 }
@@ -55,8 +58,10 @@ async function handleFormSubmit(event) {
   event.preventDefault()
 
   const formData = new FormData(addLinkForm)
-  const type = /** @type {string | null} */ formData.get('type')
-  const path = /** @type {string | null} */ formData.get('path')
+  /** @type {string} */
+  const type = any(formData.get('type'))
+  /** @type {string} */
+  const path = any(formData.get('path'))
 
   if (!type || !path) {
     showMessage('Please fill in all required fields', 'error')
@@ -64,62 +69,88 @@ async function handleFormSubmit(event) {
   }
 
   // Show loading state
-  const submitButtonElement = addLinkForm.querySelector('button[type="submit"]')
+  /** @type {HTMLButtonElement} */
+  const submitButtonElement = any(addLinkForm.querySelector('button[type="submit"]'))
   if (!submitButtonElement) return
 
   const originalText = submitButtonElement.textContent
   submitButtonElement.textContent = 'Creating...'
-  // @ts-ignore
   submitButtonElement.disabled = true
 
   try {
-    let requestBody
-    /** @type {Record<string, string>} */
-    const headers = {}
-
     if (type === 'redirect') {
-      // For redirect links, send JSON
-      requestBody = JSON.stringify({
-        path: path,
-        type: type,
-        url: formData.get('url'),
-      })
-      headers['Content-Type'] = 'application/json'
-    } else {
-      // For file links, send FormData (multipart)
-      const file = formData.get('file')
-      if (!file || !(file instanceof File)) {
-        showMessage('Please select a file', 'error')
+      const url = formData.get('url')
+      if (!url) {
+        showMessage('URL is required for redirect links', 'error')
         return
       }
 
-      const customFilename = formData.get('filename')
-      const filename =
-        customFilename && typeof customFilename === 'string'
-          ? customFilename
-          : file.name
+      const requestBody = {
+        path: path,
+        type: 'redirect',
+        url: url,
+      }
 
-      requestBody = new FormData()
-      requestBody.append('path', path)
-      requestBody.append('type', type)
-      requestBody.append('file', file)
-      requestBody.append('filename', filename)
-    }
+      const response = await fetch('/api/links', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      })
 
-    const response = await fetch('/api/links', {
-      method: 'POST',
-      headers: headers,
-      body: requestBody,
-    })
+      if (response.ok) {
+        showMessage('Link created successfully!', 'success')
+        addLinkForm.reset()
+        handleTypeChange() // Reset form state
+        await renderLinks() // Refresh the links table
+      } else {
+        const errorText = await response.text()
+        showMessage(`Error creating link: ${errorText}`, 'error')
+      }
+    } else if (type === 'file') {
+      /** @type {File} */
+      const file = any(formData.get('file'))
+      /** @type {string} */
+      const location = any(formData.get('location'))
+      /** @type {string | undefined} */
+      let filename = any(formData.get('filename'))
+      /** @type {string | undefined} */
+      let contentType = any(formData.get('content-type'))
 
-    if (response.ok) {
-      showMessage('Link created successfully!', 'success')
-      addLinkForm.reset()
-      handleTypeChange() // Reset form state
-      await renderLinks() // Refresh the links table
+      // Use original filename if not provided
+      if (!filename || typeof filename !== 'string') {
+        filename = file.name
+      }
+      // Use file's content type if not provided
+      if (!contentType || typeof contentType !== 'string') {
+        contentType = file.type || 'application/octet-stream'
+      }
+
+      // Build URL with query parameters
+      const uploadUrl = new URL('/api/links/upload', window.location.href)
+      uploadUrl.searchParams.set('path', path)
+      uploadUrl.searchParams.set('content-type', contentType)
+      uploadUrl.searchParams.set('filename', filename)
+      uploadUrl.searchParams.set('location', location)
+
+      const response = await fetch(uploadUrl, {
+        method: 'POST',
+        body: file,
+      })
+
+      if (response.ok) {
+        showMessage('File link created successfully!', 'success')
+        addLinkForm.reset()
+        handleTypeChange()
+        await renderLinks()
+      } else {
+        const errorText = await response.text()
+        showMessage(`Error creating file link: ${errorText}`, 'error')
+      }
     } else {
-      const errorText = await response.text()
-      showMessage(`Error creating link: ${errorText}`, 'error')
+      showMessage('Please select a valid link type', 'error')
+      return
     }
   } catch (error) {
     console.error('Error creating link:', error)
@@ -130,7 +161,6 @@ async function handleFormSubmit(event) {
     // Reset button state
     if (submitButtonElement) {
       submitButtonElement.textContent = originalText
-      // @ts-ignore
       submitButtonElement.disabled = false
     }
   }

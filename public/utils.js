@@ -37,7 +37,7 @@ export function querySelector(selector) {
   return element
 }
 
-/** 
+/**
  * Asserts that the value is truthy.
  * Returns the value typed to exclude falsy types.
  * @template T
@@ -51,7 +51,16 @@ export function assert(value) {
   return value
 }
 
-/** 
+/**
+ * Identity function that returns with the type any.
+ * @param {unknown} value
+ * @returns {any}
+ */
+export function any(value) {
+  return value
+}
+
+/**
  * Asserts that the value is truthy and returns it as
  * any, so you can override
  * @param {unknown} value
