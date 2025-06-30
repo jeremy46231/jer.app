@@ -4,25 +4,87 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>jer.app</title>
-
+    <link rel="stylesheet" href="styles.css" />
     <script type="module" src="main.js"></script>
   </head>
   <body>
     <h1>jer.app dashboard</h1>
-    <table class="links-table">
-      <thead>
-        <tr>
-          <th>Path</th>
-          <th>Type</th>
-          <th>Value</th>
-        </tr>
-      </thead>
-      <tbody id="links-tbody">
-        <!-- Links will be populated here by main.js -->
-        <tr>
-          <td colspan="3">Loading links...</td>
-        </tr>
-      </tbody>
-    </table>
+
+    <!-- Add Link Form -->
+    <section class="add-link-section">
+      <h2>Add New Link</h2>
+      <form id="add-link-form" class="link-form">
+        <div class="form-group">
+          <label for="path">Path:</label>
+          <input
+            type="text"
+            id="path"
+            name="path"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="type">Link Type:</label>
+          <select id="type" name="type" required>
+            <option value="">Select a type...</option>
+            <option value="redirect">Redirect</option>
+            <option value="inline_file">Inline File</option>
+            <!-- <option value="attachment_file">Attachment File</option> -->
+          </select>
+        </div>
+
+        <!-- Redirect-specific fields -->
+        <div id="redirect-fields" class="type-fields" style="display: none">
+          <div class="form-group">
+            <label for="url">URL:</label>
+            <input
+              type="url"
+              id="url"
+              name="url"
+              placeholder="https://example.com"
+            />
+          </div>
+        </div>
+
+        <!-- File-specific fields -->
+        <div id="file-fields" class="type-fields" style="display: none">
+          <div class="form-group">
+            <label for="file">File:</label>
+            <input type="file" id="file" name="file" />
+          </div>
+          <div class="form-group">
+            <label for="filename">Custom Filename (optional):</label>
+            <input type="text" id="filename" name="filename" />
+            <small>Leave empty to use original filename</small>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit">Create Link</button>
+          <button type="reset">Clear Form</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="links-section">
+      <h2>Links</h2>
+      <table class="links-table">
+        <thead>
+          <tr>
+            <th>Path</th>
+            <th>Type</th>
+            <th>Value</th>
+          </tr>
+        </thead>
+        <tbody id="links-tbody">
+          <tr>
+            <td colspan="3" style="text-align: center; color: #666">
+              Loading links...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
   </body>
 </html>

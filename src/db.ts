@@ -70,3 +70,23 @@ export async function getLinks(db: D1Database): Promise<Link[]> {
     }
   })
 }
+
+export async function createLink(db: D1Database, linkData: Link): Promise<void> {
+  const { path, type } = linkData
+
+  if (type === 'redirect') {
+    const redirectData = linkData
+    await db.prepare(`
+      INSERT INTO links (path, type, url)
+      VALUES (?, ?, ?)
+    `).bind(path, type, redirectData.url).run()
+  } else if (type === 'inline_file') {
+    const fileData = linkData
+    await db.prepare(`
+      INSERT INTO links (path, type, file, content_type, filename)
+      VALUES (?, ?, ?, ?, ?)
+    `).bind(path, type, fileData.file, fileData.contentType, fileData.filename).run()
+  } else {
+    throw new Error(`Unsupported link type: ${type}`)
+  }
+}

@@ -25,7 +25,7 @@ function unauthorized(text = 'Unauthorized'): Response {
   })
 }
 
-export function requireAuth(request: Request): Response | true {
+export function requireAuth(request: Request, env: Env): Response | true {
   const authHeader = request.headers.get('Authorization')
   if (!authHeader) {
     return unauthorized()

@@ -1,0 +1,122 @@
+body {
+  font-family: system-ui, sans-serif;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  max-width: 50rem;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+label {
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+input,
+select {
+  width: 100%;
+  padding: 0.5rem;
+}
+
+.type-fields {
+  margin-left: 1rem;
+}
+
+.form-actions {
+  margin-top: 1rem;
+}
+
+button {
+  padding: 0.5rem 1rem;
+  margin-right: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+}
+button[type='submit'] {
+  background: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+.links-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+.links-table th,
+.links-table td {
+  padding: 8px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+.error-message {
+  color: red;
+  background: #ffe6e6;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+}
+.success-message {
+  color: green;
+  background: #e6ffe6;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+}
+
+/* based on https://joshwcomeau.com/css/custom-css-reset <3 */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+* {
+  margin: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    interpolate-size: allow-keywords;
+  }
+}
+img,
+picture,
+video,
+canvas,
+svg {
+  display: block;
+  max-width: 100%;
+}
+input,
+button,
+textarea,
+select {
+  font: inherit;
+}
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  overflow-wrap: break-word;
+}
+p {
+  text-wrap: pretty;
+}
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  text-wrap: balance;
+}
