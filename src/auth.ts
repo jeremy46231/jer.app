@@ -42,8 +42,8 @@ export function requireAuth(request: Request, env: Env): Response | true {
   const username = decoded.slice(0, colonIndex)
   const password = decoded.slice(colonIndex + 1)
   if (
-    !timingSafeEqual(username, 'jeremy') ||
-    !timingSafeEqual(password, '123')
+    !timingSafeEqual(username, env.ADMIN_USERNAME) ||
+    !timingSafeEqual(password, env.ADMIN_PASSWORD)
   ) {
     return unauthorized('Invalid Username or Password')
   }
