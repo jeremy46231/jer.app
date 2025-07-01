@@ -38,73 +38,6 @@ export async function handleAPI(
 
   // POST /api/links - create a new non-file link
   if (url.pathname === '/api/links' && request.method === 'POST') {
-    // if (contentType.includes('application/json')) {
-    //   // Handle redirect links
-    //   const data = (await request.json()) as any
-    //   const { path, type, url } = data
-
-    //   if (!path || !type || type !== 'redirect' || !url) {
-    //     return new Response('Missing required fields', {
-    //       status: 400,
-    //     })
-    //   }
-
-    //   await createLink(env.DB, { path, type: 'redirect', url })
-    //   return new Response('Link created successfully', {
-    //     status: 201,
-    //   })
-    // } else if (contentType.includes('multipart/form-data')) {
-    //   // Handle files
-    //   const formData = await request.formData()
-    //   const path = formData.get('path')
-    //   const type = formData.get('type')
-    //   const file = formData.get('file')
-    //   const filename = formData.get('filename')
-
-    //   if (
-    //     typeof path !== 'string' ||
-    //     typeof type !== 'string' ||
-    //     !(file instanceof Blob) ||
-    //     typeof filename !== 'string'
-    //   ) {
-    //     return new Response('Invalid form data', { status: 400 })
-    //   }
-
-    //   if (type === 'inline_file') {
-    //     const fileBuffer = await file.arrayBuffer()
-    //     const fileData = new Uint8Array(fileBuffer)
-    //     const finalFilename = filename || file.name
-
-    //     await createLink(env.DB, {
-    //       path,
-    //       type: type,
-    //       file: fileData,
-    //       contentType: file.type,
-    //       filename: finalFilename,
-    //     })
-
-    //     return new Response('Link created successfully', {
-    //       status: 201,
-    //     })
-    //   }
-    //   if (type === 'attachment_file') {
-    //     const downloadLink = await uploadToGofile(file, filename)
-    //     await createLink(env.DB, {
-    //       path,
-    //       type: type,
-    //       url: downloadLink,
-    //       contentType: file.type,
-    //       filename: filename,
-    //     })
-
-    //     return new Response('Link created successfully', {
-    //       status: 201,
-    //     })
-    //   }
-    // } else {
-    //   return new Response('Unsupported content type', { status: 400 })
-    // }
-
     const data = (await request.json()) as NonFileLinkCreationData
     switch (data.type) {
       case 'redirect':
@@ -149,10 +82,11 @@ export async function handleAPI(
         return new Response('Link created successfully', { status: 201 })
       case 'gofile':
         const file = request.body
+        const length = Number(request.headers.get('Content-Length'))
         if (!file) {
           return new Response('File is required', { status: 400 })
         }
-        const downloadLink = await uploadToGofile(file, filename)
+        const downloadLink = await uploadToGofile(file, filename, length)
         await createLink(env.DB, {
           path,
           type: 'attachment_file',

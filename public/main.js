@@ -4,9 +4,10 @@ import {
   getElementById,
   getExtensionFromContentType,
   html,
+  uploadWithProgress,
 } from './utils.js'
 /**
- * @typedef {import('../src/db.ts').Link} Link
+ * @typedef {import('../shared-types').Link} Link
  */
 
 /** @type {HTMLTableSectionElement} */
@@ -206,10 +207,13 @@ async function handleFormSubmit(event) {
       uploadUrl.searchParams.set('location', location)
       uploadUrl.searchParams.set('download', download.toString())
 
-      const response = await fetch(uploadUrl, {
-        method: 'POST',
-        body: fileToUpload,
-      })
+      const response = await uploadWithProgress(
+        uploadUrl.toString(),
+        fileToUpload,
+        (progress) => {
+          showMessage(`Uploading... ${progress.toFixed(1)}%`, 'info')
+        }
+      )
 
       if (response.ok) {
         showMessage(
@@ -274,37 +278,6 @@ async function handleDeleteLink(path) {
 }
 
 /**
- * Shows a message to the user
- * @param {string} message
- * @param {'success' | 'error'} type
- */
-function showMessage(message, type) {
-  // Remove existing messages
-  const existingMessages = document.querySelectorAll(
-    '.success-message, .error-message'
-  )
-  existingMessages.forEach((msg) => msg.remove())
-
-  const messageDiv = document.createElement('div')
-  messageDiv.className =
-    type === 'success' ? 'success-message' : 'error-message'
-  messageDiv.textContent = message
-
-  // Insert before the form
-  const addLinkSection = document.querySelector('.add-link-section')
-  if (addLinkSection) {
-    addLinkSection.insertBefore(messageDiv, addLinkForm)
-  }
-
-  // Auto-remove success messages after 5 seconds
-  if (type === 'success') {
-    setTimeout(() => {
-      messageDiv.remove()
-    }, 5000)
-  }
-}
-
-/**
  * Fetches links from the API.
  * @returns {Promise<Link[]>} A promise that resolves to an array of links.
  */
@@ -327,7 +300,7 @@ async function renderLinks() {
     </tr>
   `
   try {
-    /** @type {import('../src/db.ts').Link[]} */
+    /** @type {Link[]} */
     const links = await getLinks()
     console.log('Links:', links)
     linksTableBody.innerHTML = ''
@@ -428,6 +401,43 @@ async function renderLinks() {
       </td>
     `
     linksTableBody.appendChild(row)
+  }
+}
+
+/** @type {ReturnType<typeof setTimeout> | null} */
+let messageTimeout = null
+
+/**
+ * Shows a message to the user
+ * @param {string} message
+ * @param {'success' | 'error' | 'info'} type
+ */
+export function showMessage(message, type) {
+  // Remove existing messages
+  const existingMessages = document.querySelectorAll(
+    '.success-message, .error-message, .info-message'
+  )
+  existingMessages.forEach((msg) => msg.remove())
+  if (messageTimeout) {
+    clearTimeout(messageTimeout)
+  }
+  messageTimeout = null
+
+  const messageDiv = document.createElement('div')
+  messageDiv.className = `${type}-message`
+  messageDiv.textContent = message
+
+  // Insert before the form
+  const addLinkSection = document.querySelector('.add-link-section')
+  if (addLinkSection) {
+    addLinkSection.insertBefore(messageDiv, addLinkForm)
+  }
+
+  // Auto-remove success messages after 5 seconds
+  if (type === 'success') {
+    messageTimeout = setTimeout(() => {
+      messageDiv.remove()
+    }, 5000)
   }
 }
 

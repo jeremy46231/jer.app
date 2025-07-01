@@ -1,6 +1,16 @@
 export async function uploadToGofile(
-  file: ReadableStream | Blob | string,
+  file: Blob | string,
   filename: string
+): Promise<string>
+export async function uploadToGofile(
+  file: ReadableStream,
+  filename: string,
+  length: number
+): Promise<string>
+export async function uploadToGofile(
+  file: ReadableStream | Blob | string,
+  filename: string,
+  length?: number
 ): Promise<string> {
   // https://gofile.io/api
 
@@ -16,23 +26,31 @@ export async function uploadToGofile(
       body: formData,
     })
   } else if (file instanceof ReadableStream) {
+    if (length === undefined) {
+      throw new Error('Length must be provided for ReadableStream uploads')
+    }
+
     const boundary = '-'.repeat(30) + Math.random().toFixed(15).slice(2)
 
     const encoder = new TextEncoder()
     const prefix = encoder.encode(
       `--${boundary}\r\n` +
         `Content-Disposition: form-data; name="file"; filename="${filename}"\r\n` +
-        `Content-Type: application/octet-stream\r\n\r\n`
+        `Content-Type: application/octet-stream\r\n` +
+        `Content-Length: ${length}\r\n` +
+        `\r\n`
     )
-    const suffix = encoder.encode(`\r\n--${boundary}--`)
+    const suffix = encoder.encode(`\r\n--${boundary}--\r\n`)
 
     const multipartStream = new ReadableStream({
       async start(controller) {
+        console.log('Starting multipart stream upload to Gofile')
         // Emit the prefix
         controller.enqueue(prefix)
         // Pipe the source file stream
         const reader = file.getReader()
         while (true) {
+          console.log('Reading from file stream...')
           const { done, value } = await reader.read()
           if (done) break
           controller.enqueue(value)
@@ -40,6 +58,7 @@ export async function uploadToGofile(
         // Emit the suffix and close
         controller.enqueue(suffix)
         controller.close()
+        console.log('Multipart stream upload to Gofile completed')
       },
     })
 
@@ -54,7 +73,9 @@ export async function uploadToGofile(
     throw new Error('Unsupported file type. Must be Blob or ReadableStream.')
   }
 
+  console.log('Uploading to Gofile:', request.url)
   const response = await fetch(request)
+  console.log('Gofile upload response:', response.status, response.statusText)
   if (!response.ok) {
     throw new Error(`Failed to upload file: ${response.statusText}`)
   }

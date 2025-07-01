@@ -1,10 +1,5 @@
 const encoder = new TextEncoder()
 
-declare global {
-  interface SubtleCrypto {
-    timingSafeEqual(a: ArrayBuffer, b: ArrayBuffer): boolean
-  }
-}
 function timingSafeEqual(a: string, b: string): boolean {
   const aBytes = encoder.encode(a)
   const bBytes = encoder.encode(b)

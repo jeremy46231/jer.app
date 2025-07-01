@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "declaration": true,
+    "lib": ["es2021"],
+    "types": ["./worker-configuration.d.ts"]
+  },
+  "include": ["worker-configuration.d.ts", "src/**/*.ts", "shared-types.d.ts"]
+}

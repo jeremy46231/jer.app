@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "declaration": true,
+    "lib": ["es2021", "dom"]
+  },
+  "include": ["public/**/*", "types.d.ts", "shared-types.d.ts"]
+}

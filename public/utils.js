@@ -45,14 +45,16 @@ export function querySelector(selector) {
 export function getExtensionFromContentType(contentType) {
   const extensions = {
     'text/html': 'html',
-    'text/css': 'css', 
+    'text/css': 'css',
     'application/javascript': 'js',
     'text/javascript': 'js',
     'image/svg+xml': 'svg',
     'application/json': 'json',
-    'text/plain': 'txt'
+    'text/plain': 'txt',
   }
-  return extensions[/** @type {keyof typeof extensions} */(contentType)] || 'txt'
+  return (
+    extensions[/** @type {keyof typeof extensions} */ (contentType)] || 'txt'
+  )
 }
 
 /**
@@ -84,4 +86,48 @@ export function any(value) {
  */
 export function assertAny(value) {
   return assert(value)
+}
+
+/**
+ * Uploads a file using XMLHttpRequest with progress tracking
+ * @param {string} url - The upload URL
+ * @param {Blob|File} file - The file to upload
+ * @param {function(number): void} onProgress - Progress callback (0-100)
+ * @returns {Promise<any>} - Promise that resolves to a Response-like object
+ */
+export function uploadWithProgress(url, file, onProgress) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+
+    // Track upload progress
+    xhr.upload.addEventListener('progress', (event) => {
+      if (event.lengthComputable) {
+        const percentComplete = Math.round((event.loaded / event.total) * 100)
+        onProgress(percentComplete)
+      }
+    })
+
+    xhr.addEventListener('load', () => {
+      // Create a Response-like object for compatibility
+      const responseObj = {
+        ok: xhr.status >= 200 && xhr.status < 300,
+        status: xhr.status,
+        statusText: xhr.statusText,
+        text: () => Promise.resolve(xhr.responseText),
+        json: () => Promise.resolve(JSON.parse(xhr.responseText)),
+      }
+      resolve(responseObj)
+    })
+
+    xhr.addEventListener('error', () => {
+      reject(new Error('Upload failed'))
+    })
+
+    xhr.addEventListener('abort', () => {
+      reject(new Error('Upload aborted'))
+    })
+
+    xhr.open('POST', url)
+    xhr.send(file)
+  })
 }

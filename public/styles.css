@@ -89,6 +89,13 @@ button[type='submit'] {
   border-radius: 4px;
   margin-bottom: 15px;
 }
+.info-message {
+  color: #666;
+  background: #f5f5f5;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+}
 
 /* based on https://joshwcomeau.com/css/custom-css-reset <3 */
 
