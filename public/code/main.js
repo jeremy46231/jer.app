@@ -7,7 +7,7 @@ import {
   uploadWithProgress,
 } from './utils.js'
 /**
- * @typedef {import('../shared-types').Link} Link
+ * @typedef {import('../../shared-types.js').Link} Link
  */
 
 /** @type {HTMLTableSectionElement} */
