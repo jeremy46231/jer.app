@@ -1,4 +1,10 @@
-import { any, assertAny, getElementById, html } from './utils.js'
+import {
+  any,
+  assertAny,
+  getElementById,
+  getExtensionFromContentType,
+  html,
+} from './utils.js'
 /**
  * @typedef {import('../src/db.ts').Link} Link
  */
@@ -7,12 +13,32 @@ import { any, assertAny, getElementById, html } from './utils.js'
 const linksTableBody = getElementById('links-tbody')
 /** @type {HTMLFormElement} */
 const addLinkForm = getElementById('add-link-form')
+/** @type {HTMLInputElement} */
+const pathInput = getElementById('path')
 /** @type {HTMLSelectElement} */
 const typeSelect = getElementById('type')
 /** @type {HTMLDivElement} */
 const redirectFields = getElementById('redirect-fields')
+/** @type {HTMLInputElement} */
+const urlInput = getElementById('url')
 /** @type {HTMLDivElement} */
 const fileFields = getElementById('file-fields')
+/** @type {HTMLDivElement} */
+const fileInputGroup = getElementById('file-input-group')
+/** @type {HTMLInputElement} */
+const fileInput = getElementById('file')
+/** @type {HTMLDivElement} */
+const textInputGroup = getElementById('text-input-group')
+/** @type {HTMLTextAreaElement} */
+const textInput = getElementById('text')
+/** @type {HTMLSelectElement} */
+const locationSelect = getElementById('location')
+/** @type {HTMLElement} */
+const filenameHelp = getElementById('filename-help')
+/** @type {HTMLInputElement} */
+const contentTypeInput = getElementById('content-type')
+/** @type {HTMLElement} */
+const contentTypeHelp = getElementById('content-type-help')
 
 /**
  * Shows or hides form fields based on selected link type
@@ -25,16 +51,13 @@ function handleTypeChange() {
   fileFields.style.display = 'none'
 
   // Clear validation requirements
-  /** @type {HTMLInputElement} */
-  const urlInput = getElementById('url')
-  /** @type {HTMLInputElement} */
-  const fileInput = getElementById('file')
-  /** @type {HTMLSelectElement} */
-  const locationSelect = getElementById('location')
-
   urlInput.required = false
   fileInput.required = false
   locationSelect.required = false
+
+  // Hide both file and text input groups
+  fileInputGroup.style.display = 'none'
+  textInputGroup.style.display = 'none'
 
   // Show relevant fields and set validation
   switch (selectedType) {
@@ -44,8 +67,20 @@ function handleTypeChange() {
       break
     case 'file':
       fileFields.style.display = 'block'
+      fileInputGroup.style.display = 'block'
       fileInput.required = true
       locationSelect.required = true
+      contentTypeHelp.textContent =
+        'Leave blank to use browser-provided default'
+      filenameHelp.textContent = 'Leave empty to use original filename'
+      break
+    case 'text':
+      fileFields.style.display = 'block'
+      textInputGroup.style.display = 'block'
+      textInput.required = true
+      locationSelect.required = true
+      contentTypeHelp.textContent = 'Defaults to text/plain'
+      updateFilenameHelp()
       break
   }
 }
@@ -110,9 +145,7 @@ async function handleFormSubmit(event) {
         const errorText = await response.text()
         showMessage(`Error creating link: ${errorText}`, 'error')
       }
-    } else if (type === 'file') {
-      /** @type {File} */
-      const file = any(formData.get('file'))
+    } else if (type === 'file' || type === 'text') {
       /** @type {string} */
       const location = any(formData.get('location'))
       /** @type {string | undefined} */
@@ -121,13 +154,48 @@ async function handleFormSubmit(event) {
       let contentType = any(formData.get('content-type'))
       const download = formData.get('download') === 'on'
 
-      // Use original filename if not provided
-      if (!filename || typeof filename !== 'string') {
-        filename = file.name
+      let fileToUpload
+      let defaultContentType
+
+      if (type === 'text') {
+        // Handle text input
+        const textContent = formData.get('text')
+        if (!textContent || typeof textContent !== 'string') {
+          showMessage('Text content is required for text links', 'error')
+          return
+        }
+
+        // Create a Blob from the text content
+        fileToUpload = new Blob([textContent], { type: 'text/plain' })
+        defaultContentType = 'text/plain'
+
+        // Use provided filename or generate smart default based on content type and path
+        if (!filename || typeof filename !== 'string') {
+          const actualContentType = contentType || defaultContentType
+          const extension = getExtensionFromContentType(actualContentType)
+          filename = `${path}.${extension}`
+        }
+      } else {
+        // Handle file input
+        /** @type {File | null} */
+        const file = any(formData.get('file'))
+        if (!file) {
+          showMessage('File is required for file links', 'error')
+          return
+        }
+
+        fileToUpload = file
+        defaultContentType = file.type || 'application/octet-stream'
+
+        // Use original filename if not provided
+        if (!filename || typeof filename !== 'string') {
+          filename = file.name
+        }
       }
-      // Use file's content type if not provided
+
+      // Use provided content type or default
       if (!contentType || typeof contentType !== 'string') {
-        contentType = file.type || 'application/octet-stream'
+        contentType = defaultContentType
       }
 
       // Build URL with query parameters
@@ -140,17 +208,20 @@ async function handleFormSubmit(event) {
 
       const response = await fetch(uploadUrl, {
         method: 'POST',
-        body: file,
+        body: fileToUpload,
       })
 
       if (response.ok) {
-        showMessage('File link created successfully!', 'success')
+        showMessage(
+          `${type === 'text' ? 'Text' : 'File'} link created successfully!`,
+          'success'
+        )
         addLinkForm.reset()
         handleTypeChange()
         await renderLinks()
       } else {
         const errorText = await response.text()
-        showMessage(`Error creating file link: ${errorText}`, 'error')
+        showMessage(`Error creating ${type} link: ${errorText}`, 'error')
       }
     } else {
       showMessage('Please select a valid link type', 'error')
@@ -360,9 +431,25 @@ async function renderLinks() {
   }
 }
 
+/**
+ * Updates filename help text based on current content type
+ */
+function updateFilenameHelp() {
+  if (typeSelect.value === 'text') {
+    const contentType = contentTypeInput.value || 'text/plain'
+    const extension = getExtensionFromContentType(contentType)
+    const currentPath = pathInput.value || 'path'
+    filenameHelp.textContent = `Leave empty to use "${currentPath}.${extension}"`
+  }
+}
+
 // Set up event listeners
 typeSelect.addEventListener('change', handleTypeChange)
 addLinkForm.addEventListener('submit', handleFormSubmit)
+
+// Add event listener for content type changes to update filename help
+contentTypeInput.addEventListener('input', updateFilenameHelp)
+pathInput.addEventListener('input', updateFilenameHelp)
 
 // Initialize form state
 handleTypeChange()

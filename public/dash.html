@@ -13,7 +13,7 @@
     <!-- Add Link Form -->
     <section class="add-link-section">
       <h2>Add New Link</h2>
-      <form id="add-link-form">
+      <form id="add-link-form" autocomplete="off">
         <div class="form-group">
           <label for="path">Path:</label>
           <p style="white-space: nowrap; width: 100%">
@@ -33,6 +33,7 @@
             <option value="">Select a type...</option>
             <option value="redirect">Redirect</option>
             <option value="file">File</option>
+            <option value="text">Text</option>
           </select>
         </div>
 
@@ -51,9 +52,18 @@
 
         <!-- File-specific fields -->
         <div id="file-fields" style="display: none">
-          <div class="form-group">
+          <div class="form-group" id="file-input-group" style="display: none">
             <label for="file">File:</label>
             <input type="file" id="file" name="file" />
+          </div>
+          <div class="form-group" id="text-input-group" style="display: none">
+            <label for="text">Text:</label>
+            <textarea
+              id="text"
+              name="text"
+              rows="5"
+              placeholder="Enter text content here"
+            ></textarea>
           </div>
           <div class="form-group">
             <label for="location">Location:</label>
@@ -67,7 +77,9 @@
           <div class="form-group">
             <label for="filename">Filename (optional):</label>
             <input type="text" id="filename" name="filename" />
-            <small>Leave empty to use original filename</small>
+            <small id="filename-help"
+              >Leave empty to use original filename</small
+            >
           </div>
           <div class="form-group">
             <label for="content-type">Content-type (optional):</label>
@@ -78,18 +90,23 @@
               list="content-types"
               placeholder="text/plain"
             />
-            <small>Leave blank to use browser-provided default</small>
+            <small id="content-type-help"
+              >Defaults to text/plain for text content, browser-provided for
+              files</small
+            >
             <datalist id="content-types">
               <option value="text/plain"></option>
+              <option value="text/html"></option>
+              <option value="text/css"></option>
+              <option value="application/javascript"></option>
+              <option value="text/javascript"></option>
+              <option value="image/svg+xml"></option>
+              <option value="application/json"></option>
               <option value="application/octet-stream"></option>
               <option value="application/pdf"></option>
               <option value="image/png"></option>
               <option value="image/jpeg"></option>
               <option value="image/gif"></option>
-              <option value="image/svg+xml"></option>
-              <option value="text/html"></option>
-              <option value="application/javascript"></option>
-              <option value="application/css"></option>
             </datalist>
           </div>
           <div class="form-group">

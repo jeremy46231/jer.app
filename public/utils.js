@@ -38,6 +38,24 @@ export function querySelector(selector) {
 }
 
 /**
+ * Determines the appropriate file extension based on content type
+ * @param {string} contentType
+ * @returns {string}
+ */
+export function getExtensionFromContentType(contentType) {
+  const extensions = {
+    'text/html': 'html',
+    'text/css': 'css', 
+    'application/javascript': 'js',
+    'text/javascript': 'js',
+    'image/svg+xml': 'svg',
+    'application/json': 'json',
+    'text/plain': 'txt'
+  }
+  return extensions[/** @type {keyof typeof extensions} */(contentType)] || 'txt'
+}
+
+/**
  * Asserts that the value is truthy.
  * Returns the value typed to exclude falsy types.
  * @template T
@@ -50,7 +68,6 @@ export function assert(value) {
   }
   return value
 }
-
 /**
  * Identity function that returns with the type any.
  * @param {unknown} value
@@ -59,7 +76,6 @@ export function assert(value) {
 export function any(value) {
   return value
 }
-
 /**
  * Asserts that the value is truthy and returns it as
  * any, so you can override
