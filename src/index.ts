@@ -6,10 +6,10 @@ export default {
     try {
       const url = new URL(request.url)
       if (url.pathname === '/') {
-        if (env.WORKER_ENV === 'development') {
-          return Response.redirect(new URL('/dash', request.url).href, 303)
+        if (env.REDIRECT_URL) {
+          return Response.redirect(env.REDIRECT_URL, 308)
         }
-        return Response.redirect('https://jeremywoolley.com', 308)
+        return Response.redirect(new URL('/dash', request.url).href, 303)
       }
 
       if (url.pathname.startsWith('/api/')) {

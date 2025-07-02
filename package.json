@@ -13,7 +13,7 @@
     "start": "wrangler dev",
     "build": "tsc --noEmit",
     "format": "prettier --write .",
-    "cf-typegen": "wrangler types",
+    "cf-typegen": "wrangler types && prettier --write worker-configuration.d.ts",
     "db:migrations:apply": "wrangler d1 migrations apply DB --remote"
   },
   "dependencies": {
