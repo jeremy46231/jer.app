@@ -1,6 +1,8 @@
 // Shared types that can be used by both frontend and backend
 // This is the single source of truth for Link types
 
+export type FileLocation = 'inline' | 'gofile' | 'hc-cdn'
+
 type GenericLink = {
   path: string
 }

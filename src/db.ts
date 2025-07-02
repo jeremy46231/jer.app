@@ -4,7 +4,7 @@ import type {
   RedirectLink,
   InlineFileLink,
   InlineFileLinkWithContent,
-  AttachmentFileLink
+  AttachmentFileLink,
 } from '../shared-types'
 
 type GenericLink = {
@@ -15,9 +15,9 @@ export async function getLinks(db: D1Database): Promise<Link[]> {
   const result = await db
     .prepare(
       `
-    SELECT path, type, url, content_type, filename, download
-    FROM links
-  `
+        SELECT path, type, url, content_type, filename, download
+        FROM links
+      `
     )
     .all()
 
@@ -75,10 +75,10 @@ export async function getLinkWithContent(
   const result = await db
     .prepare(
       `
-    SELECT path, type, url, file, content_type, filename, download
-    FROM links
-    WHERE path = ?
-  `
+        SELECT path, type, url, file, content_type, filename, download
+        FROM links
+        WHERE path = ?
+      `
     )
     .bind(path)
     .first()

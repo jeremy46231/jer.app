@@ -1,14 +1,16 @@
-export async function uploadToGofile(
+import { CombineStream } from '../combineStream.js'
+
+export async function uploadGofile(
   file: Blob | string,
   filename: string
 ): Promise<string>
-export async function uploadToGofile(
-  file: ReadableStream,
+export async function uploadGofile(
+  file: ReadableStream<Uint8Array>,
   filename: string,
   length: number
 ): Promise<string>
-export async function uploadToGofile(
-  file: ReadableStream | Blob | string,
+export async function uploadGofile(
+  file: ReadableStream<Uint8Array> | Blob | string,
   filename: string,
   length?: number
 ): Promise<string> {
@@ -32,36 +34,21 @@ export async function uploadToGofile(
 
     const boundary = '-'.repeat(30) + Math.random().toFixed(15).slice(2)
 
-    const encoder = new TextEncoder()
-    const prefix = encoder.encode(
+    const prefix =
       `--${boundary}\r\n` +
-        `Content-Disposition: form-data; name="file"; filename="${filename}"\r\n` +
-        `Content-Type: application/octet-stream\r\n` +
-        `Content-Length: ${length}\r\n` +
-        `\r\n`
-    )
-    const suffix = encoder.encode(`\r\n--${boundary}--\r\n`)
+      `Content-Disposition: form-data; name="file"; filename="${filename}"\r\n` +
+      `Content-Type: application/octet-stream\r\n` +
+      `Content-Length: ${length}\r\n` +
+      `\r\n`
+    const suffix = `\r\n--${boundary}--\r\n`
 
-    const multipartStream = new ReadableStream({
-      async start(controller) {
-        console.log('Starting multipart stream upload to Gofile')
-        // Emit the prefix
-        controller.enqueue(prefix)
-        // Pipe the source file stream
-        const reader = file.getReader()
-        while (true) {
-          console.log('Reading from file stream...')
-          const { done, value } = await reader.read()
-          if (done) break
-          controller.enqueue(value)
-        }
-        // Emit the suffix and close
-        controller.enqueue(suffix)
-        controller.close()
-        console.log('Multipart stream upload to Gofile completed')
-      },
-    })
+    const multipartStream = new CombineStream([
+      prefix,
+      { stream: file, length },
+      suffix,
+    ])
 
+    console.log('Starting multipart stream upload to Gofile')
     request = new Request('https://upload.gofile.io/uploadFile', {
       method: 'POST',
       headers: {
@@ -88,9 +75,10 @@ export async function uploadToGofile(
   return downloadPage
 }
 
-export async function getGofileContents(
-  url: string
-): Promise<ReadableStream<Uint8Array<ArrayBufferLike>>> {
+export async function downloadGofile(
+  url: string,
+  headers: HeadersInit = {}
+): Promise<Response> {
   // We must obtain a guest token from the accounts endpoint,
   // then use that token and the webToken from the global.js script
   // to access the contents route. Accessing the contents route
@@ -142,11 +130,11 @@ export async function getGofileContents(
   }
   const downloadUrl = firstFile.link as string
 
+  const downloadHeaders = new Headers(headers)
+  downloadHeaders.set('Cookie', `accountToken=${token}`)
   const fileResponse = await fetch(downloadUrl, {
-    headers: {
-      Cookie: `accountToken=${token}`,
-    },
+    headers: downloadHeaders,
   })
 
-  return fileResponse.body!
+  return fileResponse
 }

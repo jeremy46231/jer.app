@@ -9,6 +9,9 @@ import {
 /**
  * @typedef {import('../../shared-types.js').Link} Link
  */
+/**
+ * @typedef {import('../../shared-types.js').FileLocation} FileLocation
+ */
 
 /** @type {HTMLTableSectionElement} */
 const linksTableBody = getElementById('links-tbody')

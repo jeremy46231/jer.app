@@ -1,8 +1,8 @@
+import { FileLocation } from '../shared-types'
 import { requireAuth } from './auth'
 import { getLinks, createLink, deleteLink } from './db'
-import { uploadToGofile } from './gofile'
-
-export type FileLocation = 'inline' | 'gofile'
+import { uploadGofile } from './storage/gofile'
+import { uploadHCCdnDataURL } from './storage/hcCdn'
 
 type GenericLinkCreationData = {
   path: string
@@ -68,7 +68,7 @@ export async function handleAPI(
     }
 
     switch (location) {
-      case 'inline':
+      case 'inline': {
         const fileBuffer = await request.arrayBuffer()
         const fileData = new Uint8Array(fileBuffer)
         await createLink(env.DB, {
@@ -80,13 +80,14 @@ export async function handleAPI(
           download,
         })
         return new Response('Link created successfully', { status: 201 })
-      case 'gofile':
+      }
+      case 'gofile': {
         const file = request.body
         const length = Number(request.headers.get('Content-Length'))
         if (!file) {
           return new Response('File is required', { status: 400 })
         }
-        const downloadLink = await uploadToGofile(file, filename, length)
+        const downloadLink = await uploadGofile(file, filename, length)
         await createLink(env.DB, {
           path,
           type: 'attachment_file',
@@ -96,8 +97,27 @@ export async function handleAPI(
           download,
         })
         return new Response('Link created successfully', { status: 201 })
-      default:
+      }
+      case 'hc-cdn': {
+        const file = request.body
+        const length = Number(request.headers.get('Content-Length'))
+        if (!file) {
+          return new Response('File is required', { status: 400 })
+        }
+        const cdnURL = await uploadHCCdnDataURL(file, filename, length)
+        await createLink(env.DB, {
+          path,
+          type: 'attachment_file',
+          url: cdnURL,
+          contentType,
+          filename,
+          download,
+        })
+        return new Response('Link created successfully', { status: 201 })
+      }
+      default: {
         return new Response('Unsupported file location', { status: 400 })
+      }
     }
   }
 
