@@ -9,9 +9,7 @@
   </head>
   <body>
     <h1>
-      <script>
-        document.write(location.host)
-      </script>
+      <span class="host"></span>
       dashboard
     </h1>
 
@@ -22,10 +20,7 @@
         <div class="form-group">
           <label for="path">Path:</label>
           <p style="white-space: nowrap; width: 100%">
-            <script>
-              document.write(location.host)
-            </script>
-            /<input
+            <span class="host"></span>/<input
               type="text"
               id="path"
               name="path"
@@ -157,5 +152,11 @@
         </table>
       </div>
     </section>
+
+    <script>
+      document.querySelectorAll('.host').forEach((span) => {
+        span.textContent = location.host
+      })
+    </script>
   </body>
 </html>
