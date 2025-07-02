@@ -75,8 +75,8 @@ function handleTypeChange() {
       fileInput.required = true
       locationSelect.required = true
       contentTypeHelp.textContent =
-        'Leave blank to use browser-provided default'
-      filenameHelp.textContent = 'Leave empty to use original filename'
+        'Leave blank to use the browser-provided default'
+      filenameHelp.textContent = 'Leave empty to use the original filename'
       break
     case 'text':
       fileFields.style.display = 'block'
@@ -470,6 +470,7 @@ pathInput.addEventListener('input', updateFilenameHelp)
 
 // Initialize form state
 handleTypeChange()
+updateFilenameHelp()
 
 // Load initial data
 renderLinks()
