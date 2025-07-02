@@ -259,7 +259,7 @@ async function handleFormSubmit(event) {
 async function handleDeleteLink(path) {
   if (
     !confirm(
-      `Are you sure you want to delete the link "${location.hostname}/${path}"?`
+      `Are you sure you want to delete the link "${location.host}/${path}"?`
     )
   ) {
     return
@@ -275,7 +275,7 @@ async function handleDeleteLink(path) {
 
     if (response.ok) {
       showMessage(
-        `Link "${location.hostname}/${path}" deleted successfully!`,
+        `Link "${location.host}/${path}" deleted successfully!`,
         'success'
       )
     } else {
@@ -331,7 +331,7 @@ async function renderLinks() {
     }
 
     links.forEach((link) => {
-      const displayURL = `${location.hostname}/${link.path}`
+      const displayURL = `${location.host}/${link.path}`
       const linkURL = new URL(`/${link.path}`, window.location.href)
       const row = document.createElement('tr')
       row.innerHTML = html`
