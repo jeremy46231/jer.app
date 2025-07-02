@@ -82,12 +82,12 @@ export async function uploadLitterbox(
 ): Promise<string>
 export async function uploadLitterbox(
   file: ReadableStream<Uint8Array>,
-  filename: string,
+  filename: string | undefined,
   length: number
 ): Promise<string>
 export async function uploadLitterbox(
   file: ReadableStream<Uint8Array> | Blob | string,
-  filename: string,
+  filename: string = 'file',
   length?: number
 ): Promise<string> {
   // https://litterbox.catbox.moe/tools.php
@@ -99,6 +99,7 @@ export async function uploadLitterbox(
   if (file instanceof Blob) {
     const formData = new FormData()
     formData.append('reqtype', 'fileupload')
+    formData.append('time', '72h')
     formData.append('fileToUpload', file, filename)
     request = new Request(
       'https://litterbox.catbox.moe/resources/internals/api.php',
