@@ -53,7 +53,7 @@ export async function serveLink(
           const requestHeaders = new Headers(request.headers)
           requestHeaders.set(
             'User-Agent',
-            'jer.app/1.0 (https://jeremywoolley.com)'
+            'jeremy46231/jer.app (https://jeremywoolley.com)'
           )
           const response = await fetch(link.url, {
             headers: requestHeaders,

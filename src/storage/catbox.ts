@@ -28,7 +28,7 @@ export async function uploadCatbox(
       method: 'POST',
       body: formData,
       headers: {
-        'User-Agent': 'jer.app/1.0 (https://jeremywoolley.com)',
+        'User-Agent': 'jeremy46231/jer.app (https://jeremywoolley.com)',
       },
     })
   } else if (file instanceof ReadableStream) {
@@ -59,7 +59,7 @@ Content-Type: application/octet-stream
       method: 'POST',
       headers: {
         'Content-Type': `multipart/form-data; boundary=${boundary}`,
-        'User-Agent': 'jer.app/1.0 (https://jeremywoolley.com)',
+        'User-Agent': 'jeremy46231/jer.app (https://jeremywoolley.com)',
       },
       body: combinedStream,
     })
@@ -111,7 +111,7 @@ export async function uploadLitterbox(
         method: 'POST',
         body: formData,
         headers: {
-          'User-Agent': 'jer.app/1.0 (https://jeremywoolley.com)',
+          'User-Agent': 'jeremy46231/jer.app (https://jeremywoolley.com)',
         },
       }
     )
@@ -149,7 +149,7 @@ Content-Type: application/octet-stream
         method: 'POST',
         headers: {
           'Content-Type': `multipart/form-data; boundary=${boundary}`,
-          'User-Agent': 'jer.app/1.0 (https://jeremywoolley.com)',
+          'User-Agent': 'jeremy46231/jer.app (https://jeremywoolley.com)',
         },
         body: combinedStream,
       }
