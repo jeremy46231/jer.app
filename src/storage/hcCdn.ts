@@ -43,6 +43,7 @@ export async function uploadHCCdnDataURL(
     headers: {
       'Authorization': 'Bearer beans', // yep, that's the token
       'Content-Type': 'application/json',
+      'User-Agent': 'jer.app/1.0 (https://jeremywoolley.com)',
     },
     body: combinedStream,
   })

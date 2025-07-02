@@ -1,6 +1,8 @@
 repomix-output.xml
 tmp*
 .env
+.DS_Store
+Thumbs.db
 
 # Defaults
 

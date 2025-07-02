@@ -50,8 +50,10 @@ export async function serveLink(
       ]
       if (proxiedPrefixes.some((prefix) => link.url.startsWith(prefix))) {
         try {
+          const requestHeaders = new Headers(request.headers)
+          requestHeaders.set('User-Agent', 'jer.app/1.0 (https://jeremywoolley.com)')
           const response = await fetch(link.url, {
-            headers: request.headers,
+            headers: requestHeaders,
           })
 
           const responseHeaders = new Headers(response.headers)
