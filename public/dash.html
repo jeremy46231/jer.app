@@ -3,12 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>jer.app</title>
+    <title>Dashboard</title>
     <link rel="stylesheet" href="code/styles.css" />
     <script type="module" src="code/main.js"></script>
   </head>
   <body>
-    <h1>jer.app dashboard</h1>
+    <h1>
+      <script>
+        document.write(location.host)
+      </script>
+      dashboard
+    </h1>
 
     <!-- Add Link Form -->
     <section class="add-link-section">
@@ -17,7 +22,10 @@
         <div class="form-group">
           <label for="path">Path:</label>
           <p style="white-space: nowrap; width: 100%">
-            jer.app/<input
+            <script>
+              document.write(location.host)
+            </script>
+            /<input
               type="text"
               id="path"
               name="path"

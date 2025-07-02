@@ -111,8 +111,8 @@ export async function uploadLitterbox(
         method: 'POST',
         body: formData,
         headers: {
-        'User-Agent': 'jer.app/1.0 (https://jeremywoolley.com)',
-      },
+          'User-Agent': 'jer.app/1.0 (https://jeremywoolley.com)',
+        },
       }
     )
   } else if (file instanceof ReadableStream) {

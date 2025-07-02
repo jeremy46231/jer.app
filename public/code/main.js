@@ -257,7 +257,11 @@ async function handleFormSubmit(event) {
  * @param {string} path
  */
 async function handleDeleteLink(path) {
-  if (!confirm(`Are you sure you want to delete the link "jer.app/${path}"?`)) {
+  if (
+    !confirm(
+      `Are you sure you want to delete the link "${location.hostname}/${path}"?`
+    )
+  ) {
     return
   }
 
@@ -270,7 +274,10 @@ async function handleDeleteLink(path) {
     )
 
     if (response.ok) {
-      showMessage(`Link "jer.app/${path}" deleted successfully!`, 'success')
+      showMessage(
+        `Link "${location.hostname}/${path}" deleted successfully!`,
+        'success'
+      )
     } else {
       const errorText = await response.text()
       showMessage(`Error deleting link: ${errorText}`, 'error')
@@ -324,7 +331,7 @@ async function renderLinks() {
     }
 
     links.forEach((link) => {
-      const displayURL = `jer.app/${link.path}`
+      const displayURL = `${location.hostname}/${link.path}`
       const linkURL = new URL(`/${link.path}`, window.location.href)
       const row = document.createElement('tr')
       row.innerHTML = html`
