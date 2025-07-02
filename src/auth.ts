@@ -21,6 +21,18 @@ function unauthorized(text = 'Unauthorized'): Response {
 }
 
 export function requireAuth(request: Request, env: Env): Response | true {
+  if (!env.ADMIN_USERNAME && !env.ADMIN_PASSWORD) {
+    console.warn(
+      'No ADMIN_USERNAME or ADMIN_PASSWORD set. Skipping authentication.'
+    )
+    return true
+  }
+  if (!env.ADMIN_USERNAME || !env.ADMIN_PASSWORD) {
+    throw new Error(
+      'Both ADMIN_USERNAME and ADMIN_PASSWORD must be set in environment variables'
+    )
+  }
+
   const authHeader = request.headers.get('Authorization')
   if (!authHeader) {
     return unauthorized()
