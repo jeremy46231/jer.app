@@ -1,18 +1,13 @@
 import { Base64EncodeStream } from '../base64EncodeStream.js'
 import { CombineStream } from '../combineStream.js'
 
-export async function uploadHCCdnDataURL(
-  file: Blob | string,
-  filename: string
-): Promise<string>
+export async function uploadHCCdnDataURL(file: Blob | string): Promise<string>
 export async function uploadHCCdnDataURL(
   file: ReadableStream<Uint8Array>,
-  filename: string,
   length: number
 ): Promise<string>
 export async function uploadHCCdnDataURL(
   file: ReadableStream<Uint8Array> | Blob | string,
-  filename: string,
   length?: number
 ): Promise<string> {
   let fileStream: ReadableStream<Uint8Array>
@@ -37,24 +32,17 @@ export async function uploadHCCdnDataURL(
   const base64Stream = fileStream.pipeThrough(new Base64EncodeStream())
   const suffix = `"]`
 
-  
-  const combinedStream = new CombineStream([
+  const combinedStream = CombineStream([
     prefix,
     { stream: base64Stream, length: fileLength },
     suffix,
   ])
-
-  // serialize the stream to text as a test
-  const text = await new Response(combinedStream).text()
-  console.log('Serialized stream text:', text)
-  throw new Error('Test error to check stream serialization')
 
   const response = await fetch('https://cdn.hackclub.com/api/v3/new', {
     method: 'POST',
     headers: {
       'Authorization': 'Bearer beans', // yep, that's the token
       'Content-Type': 'application/json',
-      'Content-Length': String(combinedStream.length),
     },
     body: combinedStream,
   })

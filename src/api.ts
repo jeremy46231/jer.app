@@ -3,6 +3,7 @@ import { requireAuth } from './auth'
 import { getLinks, createLink, deleteLink } from './db'
 import { uploadGofile } from './storage/gofile'
 import { uploadHCCdnDataURL } from './storage/hcCdn'
+import { uploadCatbox, uploadLitterbox } from './storage/catbox'
 
 type GenericLinkCreationData = {
   path: string
@@ -104,11 +105,45 @@ export async function handleAPI(
         if (!file) {
           return new Response('File is required', { status: 400 })
         }
-        const cdnURL = await uploadHCCdnDataURL(file, filename, length)
+        const cdnURL = await uploadHCCdnDataURL(file, length)
         await createLink(env.DB, {
           path,
           type: 'attachment_file',
           url: cdnURL,
+          contentType,
+          filename,
+          download,
+        })
+        return new Response('Link created successfully', { status: 201 })
+      }
+      case 'catbox': {
+        const file = request.body
+        const length = Number(request.headers.get('Content-Length'))
+        if (!file) {
+          return new Response('File is required', { status: 400 })
+        }
+        const catboxURL = await uploadCatbox(file, filename, length)
+        await createLink(env.DB, {
+          path,
+          type: 'attachment_file',
+          url: catboxURL,
+          contentType,
+          filename,
+          download,
+        })
+        return new Response('Link created successfully', { status: 201 })
+      }
+      case 'litterbox': {
+        const file = request.body
+        const length = Number(request.headers.get('Content-Length'))
+        if (!file) {
+          return new Response('File is required', { status: 400 })
+        }
+        const litterboxURL = await uploadLitterbox(file, filename, length)
+        await createLink(env.DB, {
+          path,
+          type: 'attachment_file',
+          url: litterboxURL,
           contentType,
           filename,
           download,

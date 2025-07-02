@@ -2,16 +2,16 @@ import { CombineStream } from '../combineStream.js'
 
 export async function uploadGofile(
   file: Blob | string,
-  filename: string
+  filename?: string
 ): Promise<string>
 export async function uploadGofile(
   file: ReadableStream<Uint8Array>,
-  filename: string,
+  filename: string | undefined,
   length: number
 ): Promise<string>
 export async function uploadGofile(
   file: ReadableStream<Uint8Array> | Blob | string,
-  filename: string,
+  filename: string = 'file',
   length?: number
 ): Promise<string> {
   // https://gofile.io/api
@@ -32,29 +32,27 @@ export async function uploadGofile(
       throw new Error('Length must be provided for ReadableStream uploads')
     }
 
-    const boundary = '-'.repeat(30) + Math.random().toFixed(15).slice(2)
+    const boundary = '-'.repeat(20) + Math.random().toFixed(20).slice(2)
 
-    const prefix =
-      `--${boundary}\r\n` +
-      `Content-Disposition: form-data; name="file"; filename="${filename}"\r\n` +
-      `Content-Type: application/octet-stream\r\n` +
-      `Content-Length: ${length}\r\n` +
-      `\r\n`
+    const prefix = `--${boundary}
+Content-Disposition: form-data; name="file"; filename="${filename}"
+Content-Type: application/octet-stream
+
+`.replaceAll(/\r?\n/g, '\r\n')
     const suffix = `\r\n--${boundary}--\r\n`
 
-    const multipartStream = new CombineStream([
+    const combinedStream = CombineStream([
       prefix,
       { stream: file, length },
       suffix,
     ])
 
-    console.log('Starting multipart stream upload to Gofile')
     request = new Request('https://upload.gofile.io/uploadFile', {
       method: 'POST',
       headers: {
         'Content-Type': `multipart/form-data; boundary=${boundary}`,
       },
-      body: multipartStream,
+      body: combinedStream,
     })
   } else {
     throw new Error('Unsupported file type. Must be Blob or ReadableStream.')
@@ -62,7 +60,6 @@ export async function uploadGofile(
 
   console.log('Uploading to Gofile:', request.url)
   const response = await fetch(request)
-  console.log('Gofile upload response:', response.status, response.statusText)
   if (!response.ok) {
     throw new Error(`Failed to upload file: ${response.statusText}`)
   }

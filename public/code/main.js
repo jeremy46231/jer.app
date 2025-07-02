@@ -214,7 +214,11 @@ async function handleFormSubmit(event) {
         uploadUrl.toString(),
         fileToUpload,
         (progress) => {
-          showMessage(`Uploading... ${progress.toFixed(1)}%`, 'info')
+          if (progress === 100) {
+            showMessage(`Processing...`, 'info')
+            return
+          }
+          showMessage(`Uploading... ${progress.toFixed(0)}%`, 'info')
         }
       )
 

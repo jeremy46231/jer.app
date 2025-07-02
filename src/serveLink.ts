@@ -6,7 +6,7 @@ export async function serveLink(
   env: Env
 ): Promise<Response | undefined> {
   const url = new URL(request.url)
-  const path = url.pathname.slice(1)
+  const path = decodeURIComponent(url.pathname.slice(1))
   const link = await getLinkWithContent(env.DB, path)
   if (!link) return
 
@@ -43,7 +43,12 @@ export async function serveLink(
         }
       }
 
-      if (link.url.startsWith('https://hc-cdn.hel1.your-objectstorage.com/')) {
+      const proxiedPrefixes = [
+        'https://hc-cdn.hel1.your-objectstorage.com/',
+        'https://files.catbox.moe',
+        'https://litter.catbox.moe',
+      ]
+      if (proxiedPrefixes.some((prefix) => link.url.startsWith(prefix))) {
         try {
           const response = await fetch(link.url, {
             headers: request.headers,
@@ -59,7 +64,7 @@ export async function serveLink(
             headers: responseHeaders,
           })
         } catch (error) {
-          console.error('Error fetching HC CDN contents:', error)
+          console.error('Error fetching upstream contents:', error)
         }
       }
 
