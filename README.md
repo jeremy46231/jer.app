@@ -3,6 +3,8 @@
 A personal link shortener and free file-hosting service, built to run on the
 Cloudflare edge. It's super easy to deploy and requires no API keys.
 
+![Screenshot of the dashboard](screenshot.png)
+
 ## What it is
 
 `jer.app` is a self-hosted, easy-to-deploy service for managing short links and
