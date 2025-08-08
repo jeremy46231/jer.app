@@ -17,6 +17,6 @@
     "db:migrations:apply": "wrangler d1 migrations apply DB --remote"
   },
   "dependencies": {
-    "wrangler": "^4.22.0"
+    "wrangler": "^4.24.3"
   }
 }

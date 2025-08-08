@@ -69,18 +69,30 @@
             ></textarea>
           </div>
           <div class="form-group">
-            <label for="location">Location:</label>
-            <select id="location" name="location">
-              <option value="">Select a location...</option>
-              <option value="inline">Inline in DB (5gb total, fast)</option>
-              <option value="catbox">Catbox (200mb, forever)</option>
-              <option value="litterbox">Litterbox (1gb, 72h)</option>
-              <option value="gofile">
-                Gofile (unlimited, temporary, slow)
-              </option>
-              <option value="hc-cdn">Hack Club CDN (70kb, forever)</option>
-            </select>
-            <small>Where to store the file?</small>
+            <label>Storage Locations:</label>
+            <div class="checkbox-group">
+              <label class="checkbox-label">
+                <input type="checkbox" name="locations" value="inline" checked />
+                <span>Inline in DB (5gb total, fast)</span>
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" name="locations" value="hc-cdn" />
+                <span>Hack Club CDN (70kb, forever)</span>
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" name="locations" value="catbox" />
+                <span>Catbox (200mb, forever)</span>
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" name="locations" value="litterbox" />
+                <span>Litterbox (1gb, 72h)</span>
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" name="locations" value="gofile" />
+                <span>Gofile (unlimited, temporary, slow)</span>
+              </label>
+            </div>
+            <small>Select one or more storage locations. Files will be uploaded to all selected providers for redundancy.</small>
           </div>
           <div class="form-group">
             <label for="filename">Filename (optional):</label>

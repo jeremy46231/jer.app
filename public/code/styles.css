@@ -97,6 +97,30 @@ button[type='submit'] {
   margin-bottom: 15px;
 }
 
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 0.25rem 0;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: auto;
+  margin-right: 0.75rem;
+  margin-top: 0;
+}
+
+.checkbox-label span {
+  font-size: 0.9rem;
+}
+
 /* based on https://joshwcomeau.com/css/custom-css-reset <3 */
 
 *,

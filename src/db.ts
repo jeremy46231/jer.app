@@ -15,7 +15,7 @@ export async function getLinks(db: D1Database): Promise<Link[]> {
   const result = await db
     .prepare(
       `
-        SELECT path, type, url, content_type, filename, download
+        SELECT path, type, redirect_url, gofile_url, catbox_url, litterbox_url, hc_cdn_url, content_type, filename, download
         FROM links
       `
     )
@@ -24,7 +24,11 @@ export async function getLinks(db: D1Database): Promise<Link[]> {
   const rows = result.results as {
     path: string
     type: string
-    url?: string
+    redirect_url?: string
+    gofile_url?: string
+    catbox_url?: string
+    litterbox_url?: string
+    hc_cdn_url?: string
     content_type?: string
     filename?: string
     download?: boolean
@@ -40,7 +44,7 @@ export async function getLinks(db: D1Database): Promise<Link[]> {
         return {
           ...generalAttributes,
           type: 'redirect',
-          url: row.url!,
+          url: row.redirect_url!,
         } satisfies RedirectLink
 
       case 'inline_file':
@@ -53,10 +57,21 @@ export async function getLinks(db: D1Database): Promise<Link[]> {
         } satisfies InlineFileLink
 
       case 'attachment_file':
+        // Determine which locations have files
+        const locations: string[] = []
+        if (row.gofile_url) locations.push('gofile')
+        if (row.catbox_url) locations.push('catbox')
+        if (row.litterbox_url) locations.push('litterbox')
+        if (row.hc_cdn_url) locations.push('hc-cdn')
+
         return {
           ...generalAttributes,
           type: 'attachment_file',
-          url: row.url!,
+          gofileUrl: row.gofile_url,
+          catboxUrl: row.catbox_url,
+          litterboxUrl: row.litterbox_url,
+          hcCdnUrl: row.hc_cdn_url,
+          locations,
           contentType: row.content_type!,
           filename: row.filename!,
           download: row.download!,
@@ -75,7 +90,7 @@ export async function getLinkWithContent(
   const result = await db
     .prepare(
       `
-        SELECT path, type, url, file, content_type, filename, download
+        SELECT path, type, redirect_url, gofile_url, catbox_url, litterbox_url, hc_cdn_url, file, content_type, filename, download
         FROM links
         WHERE path = ?
       `
@@ -88,7 +103,11 @@ export async function getLinkWithContent(
   const row = result as {
     path: string
     type: string
-    url?: string
+    redirect_url?: string
+    gofile_url?: string
+    catbox_url?: string
+    litterbox_url?: string
+    hc_cdn_url?: string
     file?: ArrayBuffer
     content_type?: string
     filename?: string
@@ -104,7 +123,7 @@ export async function getLinkWithContent(
       return {
         ...generalAttributes,
         type: 'redirect',
-        url: row.url!,
+        url: row.redirect_url!,
       } satisfies RedirectLink
 
     case 'inline_file':
@@ -121,7 +140,10 @@ export async function getLinkWithContent(
       return {
         ...generalAttributes,
         type: 'attachment_file',
-        url: row.url!,
+        gofileUrl: row.gofile_url,
+        catboxUrl: row.catbox_url,
+        litterboxUrl: row.litterbox_url,
+        hcCdnUrl: row.hc_cdn_url,
         contentType: row.content_type!,
         filename: row.filename!,
         download: row.download!,
@@ -142,7 +164,7 @@ export async function createLink(
     await db
       .prepare(
         `
-          INSERT INTO links (path, type, url)
+          INSERT INTO links (path, type, redirect_url)
           VALUES (?, ?, ?)
         `
       )
@@ -169,14 +191,13 @@ export async function createLink(
     await db
       .prepare(
         `
-          INSERT INTO links (path, type, url, content_type, filename, download)
-          VALUES (?, ?, ?, ?, ?, ?)
+          INSERT INTO links (path, type, content_type, filename, download)
+          VALUES (?, ?, ?, ?, ?)
         `
       )
       .bind(
         path,
         type,
-        linkData.url,
         linkData.contentType,
         linkData.filename,
         linkData.download

@@ -1,5 +1,5 @@
 import { getLinkWithContent } from './db'
-import { downloadGofile } from './storage/gofile'
+import { downloadPriority } from './storage/providers'
 
 export async function serveLink(
   request: Request<unknown, IncomingRequestCfProperties<unknown>>,
@@ -24,57 +24,44 @@ export async function serveLink(
       })
     }
     case 'attachment_file': {
-      const disposition = link.download ? 'attachment' : 'inline'
-      if (link.url.startsWith('https://gofile.io/d/')) {
-        try {
-          const fileResponse = await downloadGofile(link.url, request.headers)
+      // Try downloading from each provider in priority order
+      for (const provider of downloadPriority) {
+        if (provider.has(link)) {
+          try {
+            console.log(
+              `Attempting download from ${provider.name} (${provider.id})`
+            )
+            const response = await provider.download(link, request.headers)
+            if (response) {
+              // Update response headers to match our link metadata
+              const disposition = link.download ? 'attachment' : 'inline'
+              const responseHeaders = new Headers(response.headers)
+              responseHeaders.set('Content-Type', link.contentType)
+              responseHeaders.set(
+                'Content-Disposition',
+                `${disposition}; filename="${link.filename}"`
+              )
 
-          const responseHeaders = new Headers(fileResponse.headers)
-          responseHeaders.set('Content-Type', link.contentType)
-          responseHeaders.set(
-            'Content-Disposition',
-            `${disposition}; filename="${link.filename}"`
-          )
-          return new Response(fileResponse.body, {
-            headers: responseHeaders,
-          })
-        } catch (error) {
-          console.error('Error fetching Gofile contents:', error)
+              return new Response(response.body, {
+                status: response.status,
+                headers: responseHeaders,
+              })
+            }
+          } catch (error) {
+            console.error(`Error downloading from ${provider.name}:`, error)
+            // Continue to next provider
+          }
         }
       }
 
-      const proxiedPrefixes = [
-        'https://hc-cdn.hel1.your-objectstorage.com/',
-        'https://files.catbox.moe',
-        'https://litter.catbox.moe',
-      ]
-      if (proxiedPrefixes.some((prefix) => link.url.startsWith(prefix))) {
-        try {
-          const requestHeaders = new Headers(request.headers)
-          requestHeaders.set(
-            'User-Agent',
-            'jeremy46231/jer.app (https://jeremywoolley.com)'
-          )
-          const response = await fetch(link.url, {
-            headers: requestHeaders,
-          })
-
-          const responseHeaders = new Headers(response.headers)
-          responseHeaders.set('Content-Type', link.contentType)
-          responseHeaders.set(
-            'Content-Disposition',
-            `${disposition}; filename="${link.filename}"`
-          )
-          return new Response(response.body, {
-            headers: responseHeaders,
-          })
-        } catch (error) {
-          console.error('Error fetching upstream contents:', error)
+      // If all providers failed, return 502 Bad Gateway
+      console.error(`All download attempts failed for path: ${path}`)
+      return new Response(
+        'File temporarily unavailable - all storage providers failed',
+        {
+          status: 502,
         }
-      }
-
-      // If there's no special handling for the URL, just redirect
-      return Response.redirect(link.url, 307)
+      )
     }
     default: {
       return new Response('Unsupported link type', { status: 500 })

@@ -1,9 +1,6 @@
-import { FileLocation } from '../shared-types'
 import { requireAuth } from './auth'
-import { getLinks, createLink, deleteLink } from './db'
-import { uploadGofile } from './storage/gofile'
-import { uploadHCCdnDataURL } from './storage/hcCdn'
-import { uploadCatbox, uploadLitterbox } from './storage/catbox'
+import { getLinks, createLink, deleteLink, getLinkWithContent } from './db'
+import { providerMap } from './storage/providers'
 
 type GenericLinkCreationData = {
   path: string
@@ -62,98 +59,111 @@ export async function handleAPI(
     const path = url.searchParams.get('path')
     const contentType = url.searchParams.get('content-type')
     const filename = url.searchParams.get('filename')
-    const location = url.searchParams.get('location') as FileLocation | null
+    const locations = url.searchParams.getAll('locations')
     const download = url.searchParams.get('download') === 'true'
-    if (!path || !contentType || !filename || !location) {
-      throw new Error('Missing required fields')
+
+    if (!path || !contentType || !filename || locations.length === 0) {
+      return new Response(
+        'Missing required fields (path, content-type, filename, locations)',
+        { status: 400 }
+      )
     }
 
-    switch (location) {
-      case 'inline': {
-        const fileBuffer = await request.arrayBuffer()
-        const fileData = new Uint8Array(fileBuffer)
-        await createLink(env.DB, {
-          path,
-          type: 'inline_file',
-          file: fileData,
-          contentType,
-          filename,
-          download,
+    // Validate that all requested locations are supported
+    for (const location of locations) {
+      if (!providerMap.has(location)) {
+        return new Response(`Unsupported file location: ${location}`, {
+          status: 400,
         })
-        return new Response('Link created successfully', { status: 201 })
-      }
-      case 'gofile': {
-        const file = request.body
-        const length = Number(request.headers.get('Content-Length'))
-        if (!file) {
-          return new Response('File is required', { status: 400 })
-        }
-        const downloadLink = await uploadGofile(file, filename, length)
-        await createLink(env.DB, {
-          path,
-          type: 'attachment_file',
-          url: downloadLink,
-          contentType,
-          filename,
-          download,
-        })
-        return new Response('Link created successfully', { status: 201 })
-      }
-      case 'hc-cdn': {
-        const file = request.body
-        const length = Number(request.headers.get('Content-Length'))
-        if (!file) {
-          return new Response('File is required', { status: 400 })
-        }
-        const cdnURL = await uploadHCCdnDataURL(file, length)
-        await createLink(env.DB, {
-          path,
-          type: 'attachment_file',
-          url: cdnURL,
-          contentType,
-          filename,
-          download,
-        })
-        return new Response('Link created successfully', { status: 201 })
-      }
-      case 'catbox': {
-        const file = request.body
-        const length = Number(request.headers.get('Content-Length'))
-        if (!file) {
-          return new Response('File is required', { status: 400 })
-        }
-        const catboxURL = await uploadCatbox(file, filename, length)
-        await createLink(env.DB, {
-          path,
-          type: 'attachment_file',
-          url: catboxURL,
-          contentType,
-          filename,
-          download,
-        })
-        return new Response('Link created successfully', { status: 201 })
-      }
-      case 'litterbox': {
-        const file = request.body
-        const length = Number(request.headers.get('Content-Length'))
-        if (!file) {
-          return new Response('File is required', { status: 400 })
-        }
-        const litterboxURL = await uploadLitterbox(file, filename, length)
-        await createLink(env.DB, {
-          path,
-          type: 'attachment_file',
-          url: litterboxURL,
-          contentType,
-          filename,
-          download,
-        })
-        return new Response('Link created successfully', { status: 201 })
-      }
-      default: {
-        return new Response('Unsupported file location', { status: 400 })
       }
     }
+
+    const file = request.body
+    const length = Number(request.headers.get('Content-Length'))
+    if (!file) {
+      return new Response('File is required', { status: 400 })
+    }
+
+    await createLink(env.DB, {
+      path,
+      type: 'attachment_file',
+      contentType,
+      filename,
+      download,
+    })
+
+    // Clone the request body stream for each provider
+    const streams: ReadableStream<Uint8Array>[] = []
+    if (locations.length === 1) {
+      streams.push(file)
+    } else {
+      const teeStreams = file.tee()
+      streams.push(teeStreams[0])
+      let remainingStream = teeStreams[1]
+
+      for (let i = 1; i < locations.length - 1; i++) {
+        const nextTee = remainingStream.tee()
+        streams.push(nextTee[0])
+        remainingStream = nextTee[1]
+      }
+      streams.push(remainingStream)
+    }
+
+    // Upload to all requested providers in parallel
+    const uploadPromises = locations.map(async (location, index) => {
+      const provider = providerMap.get(location)!
+      try {
+        await provider.upload(streams[index], filename, length, path, env.DB)
+        return { location, success: true as const, error: null }
+      } catch (error) {
+        return {
+          location,
+          success: false as const,
+          error: error instanceof Error ? error.message : String(error),
+        }
+      }
+    })
+
+    const results = await Promise.allSettled(uploadPromises)
+
+    // Collect upload results
+    const uploadResults = results.map((result, index) => {
+      if (result.status === 'fulfilled') {
+        return result.value
+      } else {
+        // shouldn't be possible, but just in case
+        throw new Error(
+          `Unhandled error in upload: ${result.reason}`
+        )
+      }
+    })
+
+    const successfulUploads = uploadResults.filter((r) => r.success)
+    const failedUploads = uploadResults.filter((r) => !r.success)
+
+    if (successfulUploads.length === 0) {
+      // All uploads failed, delete the created record
+      await deleteLink(env.DB, path)
+      return new Response(
+        JSON.stringify({
+          error: 'All uploads failed',
+          details: failedUploads,
+        }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Return success with details about which uploads succeeded/failed
+    const response = {
+      message: 'Upload completed',
+      successful: successfulUploads.map((r) => r.location),
+      failed: failedUploads.length > 0 ? failedUploads : undefined,
+    }
+
+    return new Response(JSON.stringify(response), {
+      status: failedUploads.length > 0 ? 207 : 201, // 207 Multi-Status if partial success
+      headers: { 'Content-Type': 'application/json' },
+    })
   }
 
   if (url.pathname === '/api/links' && request.method === 'DELETE') {

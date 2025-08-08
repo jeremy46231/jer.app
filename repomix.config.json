@@ -1,0 +1,6 @@
+{
+  "$schema": "https://repomix.com/schemas/latest/schema.json",
+  "ignore": {
+    "customPatterns": ["worker-configuration.d.ts"]
+  }
+}

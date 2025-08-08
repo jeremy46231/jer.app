@@ -35,8 +35,8 @@ const fileInput = getElementById('file')
 const textInputGroup = getElementById('text-input-group')
 /** @type {HTMLTextAreaElement} */
 const textInput = getElementById('text')
-/** @type {HTMLSelectElement} */
-const locationSelect = getElementById('location')
+/** @type {NodeListOf<HTMLInputElement>} */
+const locationCheckboxes = document.querySelectorAll('input[name="locations"]')
 /** @type {HTMLElement} */
 const filenameHelp = getElementById('filename-help')
 /** @type {HTMLInputElement} */
@@ -57,7 +57,6 @@ function handleTypeChange() {
   // Clear validation requirements
   urlInput.required = false
   fileInput.required = false
-  locationSelect.required = false
 
   // Hide both file and text input groups
   fileInputGroup.style.display = 'none'
@@ -73,7 +72,6 @@ function handleTypeChange() {
       fileFields.style.display = 'block'
       fileInputGroup.style.display = 'block'
       fileInput.required = true
-      locationSelect.required = true
       contentTypeHelp.textContent =
         'Leave blank to use the browser-provided default'
       filenameHelp.textContent = 'Leave empty to use the original filename'
@@ -82,7 +80,6 @@ function handleTypeChange() {
       fileFields.style.display = 'block'
       textInputGroup.style.display = 'block'
       textInput.required = true
-      locationSelect.required = true
       contentTypeHelp.textContent = 'Defaults to text/plain'
       updateFilenameHelp()
       break
@@ -150,8 +147,16 @@ async function handleFormSubmit(event) {
         showMessage(`Error creating link: ${errorText}`, 'error')
       }
     } else if (type === 'file' || type === 'text') {
-      /** @type {string} */
-      const location = any(formData.get('location'))
+      // Get selected locations from checkboxes
+      const selectedLocations = Array.from(locationCheckboxes)
+        .filter(checkbox => checkbox.checked)
+        .map(checkbox => checkbox.value)
+      
+      if (selectedLocations.length === 0) {
+        showMessage('Please select at least one storage location', 'error')
+        return
+      }
+
       /** @type {string | undefined} */
       let filename = any(formData.get('filename'))
       /** @type {string | undefined} */
@@ -207,7 +212,12 @@ async function handleFormSubmit(event) {
       uploadUrl.searchParams.set('path', path)
       uploadUrl.searchParams.set('content-type', contentType)
       uploadUrl.searchParams.set('filename', filename)
-      uploadUrl.searchParams.set('location', location)
+      
+      // Add each selected location as a separate parameter
+      selectedLocations.forEach(location => {
+        uploadUrl.searchParams.append('locations', location)
+      })
+      
       uploadUrl.searchParams.set('download', download.toString())
 
       const response = await uploadWithProgress(
@@ -222,17 +232,40 @@ async function handleFormSubmit(event) {
         }
       )
 
-      if (response.ok) {
-        showMessage(
-          `${type === 'text' ? 'Text' : 'File'} link created successfully!`,
-          'success'
-        )
+      if (response.ok || response.status === 207) { // 207 is Multi-Status for partial success
+        try {
+          const result = await response.json()
+          if (result.failed && result.failed.length > 0) {
+            // Partial success - some providers failed
+            const successMsg = `${type === 'text' ? 'Text' : 'File'} link created successfully!`
+            const failMsg = `Some storage providers failed: ${result.failed.map((/** @type {any} */ f) => f.location).join(', ')}`
+            showMessage(`${successMsg} ${failMsg}`, 'info')
+          } else {
+            // Full success
+            showMessage(
+              `${type === 'text' ? 'Text' : 'File'} link created successfully!`,
+              'success'
+            )
+          }
+        } catch (e) {
+          // Fallback for plain text responses
+          showMessage(
+            `${type === 'text' ? 'Text' : 'File'} link created successfully!`,
+            'success'
+          )
+        }
         addLinkForm.reset()
         handleTypeChange()
         await renderLinks()
       } else {
-        const errorText = await response.text()
-        showMessage(`Error creating ${type} link: ${errorText}`, 'error')
+        try {
+          const errorData = await response.json()
+          const errorMsg = errorData.error || 'Unknown error'
+          showMessage(`Error creating ${type} link: ${errorMsg}`, 'error')
+        } catch (e) {
+          const errorText = await response.text()
+          showMessage(`Error creating ${type} link: ${errorText}`, 'error')
+        }
       }
     } else {
       showMessage('Please select a valid link type', 'error')
@@ -369,14 +402,20 @@ async function renderLinks() {
           const attachmentDownloadText = link.download
             ? ' (force download)'
             : ''
+          
+          // Show available storage locations
+          const locationsText = link.locations && link.locations.length > 0 
+            ? ` [Available: ${link.locations.join(', ')}]`
+            : ''
+          
           row.insertAdjacentHTML(
             'beforeend',
             html`
               <td>
-                <a href=${link.url} target="_blank">
+                <a href=${linkURL} target="_blank">
                   <code>${link.filename}</code>
                 </a>
-                ${' '}(${link.contentType})${attachmentDownloadText}
+                ${' '}(${link.contentType})${attachmentDownloadText}${locationsText}
               </td>
             `
           )
