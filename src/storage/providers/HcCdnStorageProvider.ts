@@ -70,7 +70,9 @@ export class HcCdnStorageProvider extends AbstractStorageProvider {
       }
 
       await db
-        .prepare('INSERT INTO link_providers (path, provider_id, url) VALUES (?, ?, ?) ON CONFLICT (path, provider_id) DO UPDATE SET url = excluded.url')
+        .prepare(
+          'INSERT INTO link_providers (path, provider_id, url) VALUES (?, ?, ?) ON CONFLICT (path, provider_id) DO UPDATE SET url = excluded.url'
+        )
         .bind(linkPath, this.id, deployedUrl)
         .run()
     } catch (error) {

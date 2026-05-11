@@ -58,7 +58,9 @@ Content-Type: application/octet-stream
       }
 
       await db
-        .prepare('INSERT INTO link_providers (path, provider_id, url) VALUES (?, ?, ?) ON CONFLICT (path, provider_id) DO UPDATE SET url = excluded.url')
+        .prepare(
+          'INSERT INTO link_providers (path, provider_id, url) VALUES (?, ?, ?) ON CONFLICT (path, provider_id) DO UPDATE SET url = excluded.url'
+        )
         .bind(linkPath, this.id, link)
         .run()
     } catch (error) {
@@ -83,7 +85,9 @@ Content-Type: application/octet-stream
       })
 
       if (!fileResponse.ok) {
-        console.error(`Failed to download from Catbox: ${fileResponse.statusText}`)
+        console.error(
+          `Failed to download from Catbox: ${fileResponse.statusText}`
+        )
         return null
       }
 
