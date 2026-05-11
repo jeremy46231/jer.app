@@ -149,9 +149,9 @@ async function handleFormSubmit(event) {
     } else if (type === 'file' || type === 'text') {
       // Get selected locations from checkboxes
       const selectedLocations = Array.from(locationCheckboxes)
-        .filter(checkbox => checkbox.checked)
-        .map(checkbox => checkbox.value)
-      
+        .filter((checkbox) => checkbox.checked)
+        .map((checkbox) => checkbox.value)
+
       if (selectedLocations.length === 0) {
         showMessage('Please select at least one storage location', 'error')
         return
@@ -212,12 +212,12 @@ async function handleFormSubmit(event) {
       uploadUrl.searchParams.set('path', path)
       uploadUrl.searchParams.set('content-type', contentType)
       uploadUrl.searchParams.set('filename', filename)
-      
+
       // Add each selected location as a separate parameter
-      selectedLocations.forEach(location => {
+      selectedLocations.forEach((location) => {
         uploadUrl.searchParams.append('locations', location)
       })
-      
+
       uploadUrl.searchParams.set('download', download.toString())
 
       const response = await uploadWithProgress(
@@ -232,7 +232,8 @@ async function handleFormSubmit(event) {
         }
       )
 
-      if (response.ok || response.status === 207) { // 207 is Multi-Status for partial success
+      if (response.ok || response.status === 207) {
+        // 207 is Multi-Status for partial success
         try {
           const result = await response.json()
           if (result.failed && result.failed.length > 0) {
@@ -402,12 +403,13 @@ async function renderLinks() {
           const attachmentDownloadText = link.download
             ? ' (force download)'
             : ''
-          
+
           // Show available storage locations
-          const locationsText = link.locations && link.locations.length > 0 
-            ? ` [Available: ${link.locations.join(', ')}]`
-            : ''
-          
+          const locationsText =
+            link.locations && link.locations.length > 0
+              ? ` [Available: ${link.locations.join(', ')}]`
+              : ''
+
           row.insertAdjacentHTML(
             'beforeend',
             html`

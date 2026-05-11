@@ -111,7 +111,7 @@ button[type='submit'] {
   padding: 0.25rem 0;
 }
 
-.checkbox-label input[type="checkbox"] {
+.checkbox-label input[type='checkbox'] {
   width: auto;
   margin-right: 0.75rem;
   margin-top: 0;

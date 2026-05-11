@@ -134,9 +134,7 @@ export async function handleAPI(
         return result.value
       } else {
         // shouldn't be possible, but just in case
-        throw new Error(
-          `Unhandled error in upload: ${result.reason}`
-        )
+        throw new Error(`Unhandled error in upload: ${result.reason}`)
       }
     })
 

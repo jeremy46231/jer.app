@@ -57,8 +57,9 @@ export async function getLinks(db: D1Database): Promise<Link[]> {
         } satisfies InlineFileLink
 
       case 'attachment_file': {
-        const providerUrls: Record<string, string> =
-          row.provider_urls ? JSON.parse(row.provider_urls) : {}
+        const providerUrls: Record<string, string> = row.provider_urls
+          ? JSON.parse(row.provider_urls)
+          : {}
         return {
           ...generalAttributes,
           type: 'attachment_file',
@@ -130,8 +131,9 @@ export async function getLinkWithContent(
       } satisfies InlineFileLinkWithContent
 
     case 'attachment_file': {
-      const providerUrls: Record<string, string> =
-        row.provider_urls ? JSON.parse(row.provider_urls) : {}
+      const providerUrls: Record<string, string> = row.provider_urls
+        ? JSON.parse(row.provider_urls)
+        : {}
       return {
         ...generalAttributes,
         type: 'attachment_file',
