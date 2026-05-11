@@ -17,13 +17,26 @@ function readDevVars(): Record<string, string> {
   }
 }
 
-const ADMIN_PASSWORD =
+export const ADMIN_PASSWORD =
   process.env.ADMIN_PASSWORD ?? readDevVars()['ADMIN_PASSWORD'] ?? ''
 
 type Fixtures = {
   authedPage: import('@playwright/test').Page
   api: {
     createRedirect(path: string, url: string, status?: number): Promise<void>
+    createInlineText(
+      path: string,
+      content: string,
+      contentType?: string,
+      filename?: string
+    ): Promise<void>
+    createFileLink(
+      path: string,
+      fileBytes: Buffer,
+      contentType: string,
+      filename: string,
+      locations: string[]
+    ): Promise<void>
     deleteLink(path: string): Promise<void>
   }
   /** Unique per-test path with auto-cleanup on teardown (pass or fail). */
@@ -51,8 +64,52 @@ export const test = base.extend<Fixtures>({
           data: { type: 'redirect', path, url, status },
           headers,
         })
-        if (!r.ok()) throw new Error(`createRedirect ${path}: ${await r.text()}`)
+        if (!r.ok())
+          throw new Error(`createRedirect ${path}: ${await r.text()}`)
       },
+
+      async createInlineText(
+        path,
+        content,
+        contentType = 'text/plain',
+        filename
+      ) {
+        const bytes = Buffer.from(content)
+        const params = new URLSearchParams({
+          path,
+          'content-type': contentType,
+          'filename': filename ?? `${path}.txt`,
+          'locations': 'inline',
+        })
+        const r = await request.post(`/api/links/upload?${params}`, {
+          data: bytes,
+          headers: {
+            ...headers,
+            'Content-Length': String(bytes.length),
+          },
+        })
+        if (!r.ok())
+          throw new Error(`createInlineText ${path}: ${await r.text()}`)
+      },
+
+      async createFileLink(path, fileBytes, contentType, filename, locations) {
+        const params = new URLSearchParams({
+          path,
+          'content-type': contentType,
+          filename,
+        })
+        for (const loc of locations) params.append('locations', loc)
+        const r = await request.post(`/api/links/upload?${params}`, {
+          data: fileBytes,
+          headers: {
+            ...headers,
+            'Content-Length': String(fileBytes.length),
+          },
+        })
+        if (!r.ok())
+          throw new Error(`createFileLink ${path}: ${await r.text()}`)
+      },
+
       async deleteLink(path) {
         await request.delete(`/api/links?path=${encodeURIComponent(path)}`, {
           headers,
