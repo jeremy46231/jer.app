@@ -2,6 +2,7 @@
   "name": "jer-app",
   "version": "0.0.0",
   "devDependencies": {
+    "@types/bun": "^1.2.18",
     "htm": "^3.1.1",
     "prettier": "^3.6.2",
     "typescript": "^5.5.2"
@@ -14,7 +15,10 @@
     "build": "tsc --noEmit",
     "format": "prettier --write .",
     "cf-typegen": "wrangler types && prettier --write worker-configuration.d.ts",
-    "db:migrations:apply": "wrangler d1 migrations apply DB --remote"
+    "db:migrations:apply": "wrangler d1 migrations apply DB --remote",
+    "test": "bun test tests",
+    "test:all": "TEST_NETWORK=1 bun test tests",
+    "test:watch": "bun test tests --watch"
   },
   "dependencies": {
     "wrangler": "^4.24.3"
