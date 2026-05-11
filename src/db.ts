@@ -290,6 +290,44 @@ export async function createLink(
   }
 }
 
+export async function updateLink(
+  db: D1Database,
+  oldPath: string,
+  data: Link
+): Promise<void> {
+  const newPath = data.path
+
+  if (data.type === 'redirect') {
+    await db
+      .prepare(
+        'UPDATE links SET path = ?, redirect_url = ?, redirect_status = ? WHERE path = ?'
+      )
+      .bind(newPath, data.url, data.status ?? 302, oldPath)
+      .run()
+  } else {
+    await db
+      .prepare(
+        'UPDATE links SET path = ?, type = ?, content_type = ?, filename = ?, download = ? WHERE path = ?'
+      )
+      .bind(
+        newPath,
+        data.type,
+        data.contentType,
+        data.filename,
+        data.download,
+        oldPath
+      )
+      .run()
+  }
+
+  if (newPath !== oldPath) {
+    await db
+      .prepare('UPDATE link_providers SET path = ? WHERE path = ?')
+      .bind(newPath, oldPath)
+      .run()
+  }
+}
+
 export async function deleteLink(db: D1Database, path: string): Promise<void> {
   await db.prepare('DELETE FROM links WHERE path = ?').bind(path).run()
 }
