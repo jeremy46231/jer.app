@@ -15,8 +15,11 @@ export async function getLinks(db: D1Database): Promise<Link[]> {
   const result = await db
     .prepare(
       `
-        SELECT path, type, redirect_url, gofile_url, catbox_url, litterbox_url, hc_cdn_url, content_type, filename, download
-        FROM links
+        SELECT l.path, l.type, l.redirect_url, l.content_type, l.filename, l.download,
+               json_group_object(lp.provider_id, lp.url) AS provider_urls
+        FROM links l
+        LEFT JOIN link_providers lp ON lp.path = l.path
+        GROUP BY l.path
       `
     )
     .all()
@@ -25,13 +28,10 @@ export async function getLinks(db: D1Database): Promise<Link[]> {
     path: string
     type: string
     redirect_url?: string
-    gofile_url?: string
-    catbox_url?: string
-    litterbox_url?: string
-    hc_cdn_url?: string
     content_type?: string
     filename?: string
     download?: boolean
+    provider_urls: string | null
   }[]
 
   return rows.map((row) => {
@@ -56,26 +56,19 @@ export async function getLinks(db: D1Database): Promise<Link[]> {
           download: row.download!,
         } satisfies InlineFileLink
 
-      case 'attachment_file':
-        // Determine which locations have files
-        const locations: string[] = []
-        if (row.gofile_url) locations.push('gofile')
-        if (row.catbox_url) locations.push('catbox')
-        if (row.litterbox_url) locations.push('litterbox')
-        if (row.hc_cdn_url) locations.push('hc-cdn')
-
+      case 'attachment_file': {
+        const providerUrls: Record<string, string> =
+          row.provider_urls ? JSON.parse(row.provider_urls) : {}
         return {
           ...generalAttributes,
           type: 'attachment_file',
-          gofileUrl: row.gofile_url,
-          catboxUrl: row.catbox_url,
-          litterboxUrl: row.litterbox_url,
-          hcCdnUrl: row.hc_cdn_url,
-          locations,
+          providerUrls,
+          locations: Object.keys(providerUrls),
           contentType: row.content_type!,
           filename: row.filename!,
-          download: row.download!,
+          download: !!row.download,
         } satisfies AttachmentFileLink
+      }
 
       default:
         throw new Error(`Unknown link type: ${row.type}`)
@@ -90,9 +83,12 @@ export async function getLinkWithContent(
   const result = await db
     .prepare(
       `
-        SELECT path, type, redirect_url, gofile_url, catbox_url, litterbox_url, hc_cdn_url, file, content_type, filename, download
-        FROM links
-        WHERE path = ?
+        SELECT l.path, l.type, l.redirect_url, l.file, l.content_type, l.filename, l.download,
+               json_group_object(lp.provider_id, lp.url) AS provider_urls
+        FROM links l
+        LEFT JOIN link_providers lp ON lp.path = l.path
+        WHERE l.path = ?
+        GROUP BY l.path
       `
     )
     .bind(path)
@@ -104,14 +100,11 @@ export async function getLinkWithContent(
     path: string
     type: string
     redirect_url?: string
-    gofile_url?: string
-    catbox_url?: string
-    litterbox_url?: string
-    hc_cdn_url?: string
     file?: ArrayBuffer
     content_type?: string
     filename?: string
     download?: boolean
+    provider_urls: string | null
   }
 
   const generalAttributes = {
@@ -136,18 +129,19 @@ export async function getLinkWithContent(
         download: row.download!,
       } satisfies InlineFileLinkWithContent
 
-    case 'attachment_file':
+    case 'attachment_file': {
+      const providerUrls: Record<string, string> =
+        row.provider_urls ? JSON.parse(row.provider_urls) : {}
       return {
         ...generalAttributes,
         type: 'attachment_file',
-        gofileUrl: row.gofile_url,
-        catboxUrl: row.catbox_url,
-        litterboxUrl: row.litterbox_url,
-        hcCdnUrl: row.hc_cdn_url,
+        providerUrls,
+        locations: Object.keys(providerUrls),
         contentType: row.content_type!,
         filename: row.filename!,
-        download: row.download!,
+        download: !!row.download,
       } satisfies AttachmentFileLink
+    }
 
     default:
       throw new Error(`Unknown link type: ${row.type}`)

@@ -1,5 +1,5 @@
 import { AbstractStorageProvider } from '../AbstractStorageProvider'
-import type { LinkWithContent, AttachmentFileLink } from '../../../shared-types'
+import type { LinkWithContent } from '../../../shared-types'
 import { Base64EncodeStream } from '../../base64EncodeStream'
 import { CombineStream } from '../../combineStream'
 
@@ -8,9 +8,7 @@ export class HcCdnStorageProvider extends AbstractStorageProvider {
   readonly name = 'Hack Club CDN'
 
   has(link: LinkWithContent): boolean {
-    return (
-      link.type === 'attachment_file' && !!(link as AttachmentFileLink).hcCdnUrl
-    )
+    return !!this.getUrl(link)
   }
 
   async upload(
@@ -71,10 +69,9 @@ export class HcCdnStorageProvider extends AbstractStorageProvider {
         )
       }
 
-      // Update the database with the Hack Club CDN URL
       await db
-        .prepare('UPDATE links SET hc_cdn_url = ? WHERE path = ?')
-        .bind(deployedUrl, linkPath)
+        .prepare('INSERT INTO link_providers (path, provider_id, url) VALUES (?, ?, ?) ON CONFLICT (path, provider_id) DO UPDATE SET url = excluded.url')
+        .bind(linkPath, this.id, deployedUrl)
         .run()
     } catch (error) {
       console.error('Hack Club CDN upload failed:', error)
@@ -87,8 +84,7 @@ export class HcCdnStorageProvider extends AbstractStorageProvider {
     requestHeaders: Headers
   ): Promise<Response | null> {
     try {
-      const attachmentLink = link as AttachmentFileLink
-      const url = attachmentLink.hcCdnUrl
+      const url = this.getUrl(link)
       if (!url) {
         return null
       }

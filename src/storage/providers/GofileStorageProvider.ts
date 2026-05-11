@@ -1,5 +1,5 @@
 import { AbstractStorageProvider } from '../AbstractStorageProvider'
-import type { LinkWithContent, AttachmentFileLink } from '../../../shared-types'
+import type { LinkWithContent } from '../../../shared-types'
 import { CombineStream } from '../../combineStream'
 
 export class GofileStorageProvider extends AbstractStorageProvider {
@@ -7,7 +7,7 @@ export class GofileStorageProvider extends AbstractStorageProvider {
   readonly name = 'Gofile'
 
   has(link: LinkWithContent): boolean {
-    return link.type === 'attachment_file' && !!(link as AttachmentFileLink).gofileUrl
+    return !!this.getUrl(link)
   }
 
   async upload(
@@ -53,9 +53,9 @@ Content-Type: application/octet-stream
         throw new Error('Invalid response from Gofile: missing downloadPage')
       }
 
-      // Update the database with the Gofile URL
-      await db.prepare('UPDATE links SET gofile_url = ? WHERE path = ?')
-        .bind(downloadPage, linkPath)
+      await db
+        .prepare('INSERT INTO link_providers (path, provider_id, url) VALUES (?, ?, ?) ON CONFLICT (path, provider_id) DO UPDATE SET url = excluded.url')
+        .bind(linkPath, this.id, downloadPage)
         .run()
     } catch (error) {
       console.error('Gofile upload failed:', error)
@@ -67,8 +67,7 @@ Content-Type: application/octet-stream
     link: LinkWithContent,
     requestHeaders: Headers
   ): Promise<Response | null> {
-    const attachmentLink = link as AttachmentFileLink
-    const url = attachmentLink.gofileUrl
+    const url = this.getUrl(link)
     if (!url) {
       return null
     }

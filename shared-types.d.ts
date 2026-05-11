@@ -29,11 +29,8 @@ export type InlineFileLink = FileLink & {
 
 export type AttachmentFileLink = FileLink & {
   type: 'attachment_file'
-  gofileUrl?: string
-  catboxUrl?: string
-  litterboxUrl?: string
-  hcCdnUrl?: string
-  locations?: string[] // Array of provider IDs where file is stored
+  providerUrls: Record<string, string>
+  locations?: string[]
 }
 
 export type Link = RedirectLink | InlineFileLink | AttachmentFileLink

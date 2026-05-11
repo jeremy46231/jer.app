@@ -1,5 +1,5 @@
 import { AbstractStorageProvider } from '../AbstractStorageProvider'
-import type { LinkWithContent, AttachmentFileLink } from '../../../shared-types'
+import type { LinkWithContent } from '../../../shared-types'
 import { CombineStream } from '../../combineStream'
 
 export class LitterboxStorageProvider extends AbstractStorageProvider {
@@ -7,7 +7,7 @@ export class LitterboxStorageProvider extends AbstractStorageProvider {
   readonly name = 'Litterbox'
 
   has(link: LinkWithContent): boolean {
-    return link.type === 'attachment_file' && !!(link as AttachmentFileLink).litterboxUrl
+    return !!this.getUrl(link)
   }
 
   async upload(
@@ -64,9 +64,9 @@ Content-Type: application/octet-stream
         throw new Error('Invalid response from Litterbox')
       }
 
-      // Update the database with the Litterbox URL
-      await db.prepare('UPDATE links SET litterbox_url = ? WHERE path = ?')
-        .bind(link, linkPath)
+      await db
+        .prepare('INSERT INTO link_providers (path, provider_id, url) VALUES (?, ?, ?) ON CONFLICT (path, provider_id) DO UPDATE SET url = excluded.url')
+        .bind(linkPath, this.id, link)
         .run()
     } catch (error) {
       console.error('Litterbox upload failed:', error)
@@ -79,8 +79,7 @@ Content-Type: application/octet-stream
     requestHeaders: Headers
   ): Promise<Response | null> {
     try {
-      const attachmentLink = link as AttachmentFileLink
-      const url = attachmentLink.litterboxUrl
+      const url = this.getUrl(link)
       if (!url) {
         return null
       }

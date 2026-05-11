@@ -1,5 +1,5 @@
 import { AbstractStorageProvider } from '../AbstractStorageProvider'
-import type { LinkWithContent, AttachmentFileLink } from '../../../shared-types'
+import type { LinkWithContent } from '../../../shared-types'
 import { CombineStream } from '../../combineStream'
 
 export class CatboxStorageProvider extends AbstractStorageProvider {
@@ -7,7 +7,7 @@ export class CatboxStorageProvider extends AbstractStorageProvider {
   readonly name = 'Catbox'
 
   has(link: LinkWithContent): boolean {
-    return link.type === 'attachment_file' && !!(link as AttachmentFileLink).catboxUrl
+    return !!this.getUrl(link)
   }
 
   async upload(
@@ -57,9 +57,9 @@ Content-Type: application/octet-stream
         throw new Error('Invalid response from Catbox')
       }
 
-      // Update the database with the Catbox URL
-      await db.prepare('UPDATE links SET catbox_url = ? WHERE path = ?')
-        .bind(link, linkPath)
+      await db
+        .prepare('INSERT INTO link_providers (path, provider_id, url) VALUES (?, ?, ?) ON CONFLICT (path, provider_id) DO UPDATE SET url = excluded.url')
+        .bind(linkPath, this.id, link)
         .run()
     } catch (error) {
       console.error('Catbox upload failed:', error)
@@ -72,8 +72,7 @@ Content-Type: application/octet-stream
     requestHeaders: Headers
   ): Promise<Response | null> {
     try {
-      const attachmentLink = link as AttachmentFileLink
-      const url = attachmentLink.catboxUrl
+      const url = this.getUrl(link)
       if (!url) {
         return null
       }
