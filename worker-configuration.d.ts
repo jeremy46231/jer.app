@@ -7,6 +7,7 @@ declare namespace Cloudflare {
     ADMIN_PASSWORD: string
     REDIRECT_URL: string
     DB: D1Database
+    ASSETS: Fetcher
   }
 }
 interface Env extends Cloudflare.Env {}

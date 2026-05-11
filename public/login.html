@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login</title>
+    <link rel="stylesheet" href="code/styles.css" />
+  </head>
+  <body>
+    <h1>login</h1>
+    <section class="add-link-section">
+      <form action="/api/login" method="POST" autocomplete="off">
+        <div class="form-group">
+          <label for="password">Password:</label>
+          <input type="password" id="password" name="password" autofocus autocomplete="current-password" />
+        </div>
+        <p id="err" style="color: red; margin-bottom: 1rem; display: none">Wrong password.</p>
+        <button type="submit">Sign in</button>
+      </form>
+    </section>
+    <script>
+      if (new URLSearchParams(location.search).has('error')) {
+        document.getElementById('err').style.display = ''
+      }
+    </script>
+  </body>
+</html>

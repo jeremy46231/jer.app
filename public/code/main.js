@@ -331,6 +331,10 @@ async function handleDeleteLink(path) {
  */
 async function getLinks() {
   const response = await fetch('/api/links')
+  if (response.status === 401) {
+    window.location.href = '/login'
+    return []
+  }
   if (response.ok) {
     const data = await response.json()
     return data

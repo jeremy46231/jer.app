@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import { handleAPI } from '../src/api'
 import { getLinkWithContent } from '../src/db'
 import type { InlineFileLinkWithContent, Link } from '../shared-types'
-import { basicAuth, createTestEnv, type TestEnv } from './helpers/env'
+import { createTestEnv, sessionCookieHeader, type TestEnv } from './helpers/env'
 
 let env: TestEnv
 
@@ -30,8 +30,8 @@ describe('handleAPI auth', () => {
     expect(res.status).toBe(200)
   })
 
-  test('returns 401 when credentials are required but missing', async () => {
-    const authedEnv = createTestEnv({ username: 'admin', password: 'pw' })
+  test('returns 401 when password is required but no cookie is present', async () => {
+    const authedEnv = createTestEnv({ password: 'pw' })
     try {
       const res = await handleAPI(jsonRequest('/api/links', 'GET'), authedEnv)
       expect(res.status).toBe(401)
@@ -40,12 +40,12 @@ describe('handleAPI auth', () => {
     }
   })
 
-  test('lets correct credentials through', async () => {
-    const authedEnv = createTestEnv({ username: 'admin', password: 'pw' })
+  test('lets correct session cookie through', async () => {
+    const authedEnv = createTestEnv({ password: 'pw' })
     try {
       const req = new Request(`${BASE}/api/links`, {
         method: 'GET',
-        headers: { Authorization: basicAuth('admin', 'pw') },
+        headers: { Cookie: sessionCookieHeader('pw') },
       })
       const res = await handleAPI(req, authedEnv)
       expect(res.status).toBe(200)

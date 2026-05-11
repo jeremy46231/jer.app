@@ -6,7 +6,6 @@ export type TestEnv = Env & {
 }
 
 export interface CreateTestEnvOptions {
-  username?: string
   password?: string
   redirectUrl?: string
 }
@@ -14,25 +13,22 @@ export interface CreateTestEnvOptions {
 /**
  * Build a fresh `Env` for a test, backed by an in-memory SQLite that mimics D1.
  *
- * By default no credentials are configured, so `requireAuth` short-circuits
+ * By default no password is configured, so `requireAuth` short-circuits
  * (matching the behaviour the production code logs as "skipping authentication"
- * when no creds are set). Pass `username`/`password` to enable auth.
+ * when no password is set). Pass `password` to enable auth.
  */
 export function createTestEnv(opts: CreateTestEnvOptions = {}): TestEnv {
   const db = createTestD1()
   return {
     DB: db,
-    ADMIN_USERNAME: opts.username ?? '',
+    ADMIN_USERNAME: '',
     ADMIN_PASSWORD: opts.password ?? '',
     REDIRECT_URL: opts.redirectUrl ?? '',
     __close: () => (db as unknown as { close: () => void }).close(),
   } as TestEnv
 }
 
-/**
- * Convenience: build a `Basic` Authorization header value for the given
- * credentials.
- */
-export function basicAuth(username: string, password: string): string {
-  return 'Basic ' + btoa(`${username}:${password}`)
+/** Build a session cookie header value for the given password. */
+export function sessionCookieHeader(password: string): string {
+  return `session=${password}`
 }
