@@ -124,7 +124,11 @@ describe('serveLink', () => {
 })
 
 describe('redirect routing', () => {
-  async function link(path: string, url: string, status: 301 | 302 | 307 | 308 = 302) {
+  async function link(
+    path: string,
+    url: string,
+    status: 301 | 302 | 307 | 308 = 302
+  ) {
     await createLink(env.DB, { path, type: 'redirect', url, status })
   }
 
@@ -202,7 +206,9 @@ describe('redirect routing', () => {
     await link('a', '/b')
     await link('b', 'https://final.com/base')
     const res = await serveLink(get('/a/extra?q=1'), env)
-    expect(res!.headers.get('Location')).toBe('https://final.com/base/extra?q=1')
+    expect(res!.headers.get('Location')).toBe(
+      'https://final.com/base/extra?q=1'
+    )
   })
 
   test('internal redirect cycle returns 508', async () => {

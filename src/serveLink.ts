@@ -12,7 +12,11 @@ function mergeSearch(a: string, b: string): string {
   return s ? '?' + s : ''
 }
 
-function buildExternalUrl(target: string, remainder: string, search: string): string {
+function buildExternalUrl(
+  target: string,
+  remainder: string,
+  search: string
+): string {
   const u = new URL(target)
   if (remainder) {
     u.pathname = u.pathname.replace(/\/$/, '') + remainder
@@ -70,7 +74,9 @@ export async function serveLink(
         for (const provider of downloadPriority) {
           if (provider.has(link)) {
             try {
-              console.log(`Attempting download from ${provider.name} (${provider.id})`)
+              console.log(
+                `Attempting download from ${provider.name} (${provider.id})`
+              )
               const response = await provider.download(link, request.headers)
               if (response) {
                 const disposition = link.download ? 'attachment' : 'inline'

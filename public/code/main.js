@@ -44,7 +44,8 @@ const contentTypeInput = getElementById('content-type')
 /** @type {HTMLElement} */
 const contentTypeHelp = getElementById('content-type-help')
 /** @type {HTMLElement} */
-const redirectStatusGroup = getElementById('redirect-status').closest('.form-group')
+const redirectStatusGroup =
+  getElementById('redirect-status').closest('.form-group')
 
 /**
  * Shows or hides form fields based on selected link type
@@ -518,7 +519,9 @@ function updateFilenameHelp() {
 // Set up event listeners
 typeSelect.addEventListener('change', handleTypeChange)
 urlInput.addEventListener('input', () => {
-  redirectStatusGroup.style.display = urlInput.value.startsWith('/') ? 'none' : ''
+  redirectStatusGroup.style.display = urlInput.value.startsWith('/')
+    ? 'none'
+    : ''
 })
 addLinkForm.addEventListener('submit', handleFormSubmit)
 
