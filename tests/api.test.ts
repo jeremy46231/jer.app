@@ -80,6 +80,7 @@ describe('GET /api/links', () => {
       path: 'g',
       type: 'redirect',
       url: 'https://example.com/',
+      status: 302,
     })
   })
 })
@@ -101,6 +102,7 @@ describe('POST /api/links (non-file)', () => {
       path: 'gh',
       type: 'redirect',
       url: 'https://github.com',
+      status: 302,
     })
   })
 

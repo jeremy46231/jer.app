@@ -51,6 +51,15 @@
               placeholder="https://example.com"
             />
           </div>
+          <div class="form-group">
+            <label for="redirect-status">Status:</label>
+            <select id="redirect-status" name="redirect-status">
+              <option value="302" selected>302 Temporary</option>
+              <option value="301">301 Permanent</option>
+              <option value="307">307 Temporary (same method)</option>
+              <option value="308">308 Permanent (same method)</option>
+            </select>
+          </div>
         </div>
 
         <!-- File-specific fields -->

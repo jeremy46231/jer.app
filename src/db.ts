@@ -15,7 +15,7 @@ export async function getLinks(db: D1Database): Promise<Link[]> {
   const result = await db
     .prepare(
       `
-        SELECT l.path, l.type, l.redirect_url, l.content_type, l.filename, l.download,
+        SELECT l.path, l.type, l.redirect_url, l.redirect_status, l.content_type, l.filename, l.download,
                json_group_object(lp.provider_id, lp.url) FILTER (WHERE lp.provider_id IS NOT NULL) AS provider_urls
         FROM links l
         LEFT JOIN link_providers lp ON lp.path = l.path
@@ -28,6 +28,7 @@ export async function getLinks(db: D1Database): Promise<Link[]> {
     path: string
     type: string
     redirect_url?: string
+    redirect_status?: number
     content_type?: string
     filename?: string
     download?: boolean
@@ -45,6 +46,7 @@ export async function getLinks(db: D1Database): Promise<Link[]> {
           ...generalAttributes,
           type: 'redirect',
           url: row.redirect_url!,
+          status: (row.redirect_status ?? 302) as RedirectLink['status'],
         } satisfies RedirectLink
 
       case 'inline_file':
@@ -84,7 +86,7 @@ export async function getLinkWithContent(
   const result = await db
     .prepare(
       `
-        SELECT l.path, l.type, l.redirect_url, l.file, l.content_type, l.filename, l.download,
+        SELECT l.path, l.type, l.redirect_url, l.redirect_status, l.file, l.content_type, l.filename, l.download,
                json_group_object(lp.provider_id, lp.url) FILTER (WHERE lp.provider_id IS NOT NULL) AS provider_urls
         FROM links l
         LEFT JOIN link_providers lp ON lp.path = l.path
@@ -101,6 +103,7 @@ export async function getLinkWithContent(
     path: string
     type: string
     redirect_url?: string
+    redirect_status?: number
     file?: ArrayBuffer
     content_type?: string
     filename?: string
@@ -118,6 +121,7 @@ export async function getLinkWithContent(
         ...generalAttributes,
         type: 'redirect',
         url: row.redirect_url!,
+        status: (row.redirect_status ?? 302) as RedirectLink['status'],
       } satisfies RedirectLink
 
     case 'inline_file':
@@ -160,11 +164,11 @@ export async function createLink(
     await db
       .prepare(
         `
-          INSERT INTO links (path, type, redirect_url)
-          VALUES (?, ?, ?)
+          INSERT INTO links (path, type, redirect_url, redirect_status)
+          VALUES (?, ?, ?, ?)
         `
       )
-      .bind(path, type, linkData.url)
+      .bind(path, type, linkData.url, linkData.status ?? 302)
       .run()
   } else if (type === 'inline_file') {
     await db

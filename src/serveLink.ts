@@ -12,7 +12,7 @@ export async function serveLink(
 
   switch (link.type) {
     case 'redirect': {
-      return Response.redirect(link.url, 302)
+      return Response.redirect(link.url, link.status)
     }
     case 'inline_file': {
       const disposition = link.download ? 'attachment' : 'inline'

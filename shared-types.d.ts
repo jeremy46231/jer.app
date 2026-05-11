@@ -15,6 +15,7 @@ type GenericLink = {
 export type RedirectLink = GenericLink & {
   type: 'redirect'
   url: string
+  status: 301 | 302 | 307 | 308
 }
 
 type FileLink = GenericLink & {

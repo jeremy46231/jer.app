@@ -8,6 +8,7 @@ type GenericLinkCreationData = {
 type RedirectLinkCreationData = GenericLinkCreationData & {
   type: 'redirect'
   url: string
+  status?: 301 | 302 | 307 | 308
 }
 export type NonFileLinkCreationData = RedirectLinkCreationData
 
@@ -39,11 +40,11 @@ export async function handleAPI(
     const data = (await request.json()) as NonFileLinkCreationData
     switch (data.type) {
       case 'redirect':
-        const { path, type, url } = data
+        const { path, type, url, status } = data
         if (!path || !type || type !== 'redirect' || !url) {
           return new Response('Missing required fields', { status: 400 })
         }
-        await createLink(env.DB, { path, type: 'redirect', url })
+        await createLink(env.DB, { path, type: 'redirect', url, status: status ?? 302 })
         return new Response('Link created successfully', { status: 201 })
       default:
         return new Response('Unsupported link type', { status: 400 })

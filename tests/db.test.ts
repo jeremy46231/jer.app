@@ -42,6 +42,7 @@ describe('createLink + getLinkWithContent', () => {
       path: 'g',
       type: 'redirect',
       url: 'https://example.com/',
+      status: 302,
     })
   })
 

@@ -127,6 +127,7 @@ async function handleFormSubmit(event) {
         path: path,
         type: 'redirect',
         url: url,
+        status: Number(formData.get('redirect-status')) || 302,
       }
 
       const response = await fetch('/api/links', {
