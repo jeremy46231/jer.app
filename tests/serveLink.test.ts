@@ -122,3 +122,106 @@ describe('serveLink', () => {
     expect(res!.status).toBe(502)
   })
 })
+
+describe('redirect routing', () => {
+  async function link(path: string, url: string, status: 301 | 302 | 307 | 308 = 302) {
+    await createLink(env.DB, { path, type: 'redirect', url, status })
+  }
+
+  test('forwards query string to external target', async () => {
+    await link('a', 'https://example.com/')
+    const res = await serveLink(get('/a?foo=bar'), env)
+    expect(res!.status).toBe(302)
+    expect(res!.headers.get('Location')).toBe('https://example.com/?foo=bar')
+  })
+
+  test('appends sub-path to external target', async () => {
+    await link('a', 'https://example.com/base')
+    const res = await serveLink(get('/a/c/d'), env)
+    expect(res!.headers.get('Location')).toBe('https://example.com/base/c/d')
+  })
+
+  test('appends sub-path and query string together', async () => {
+    await link('a', 'https://example.com/base')
+    const res = await serveLink(get('/a/c?x=1'), env)
+    expect(res!.headers.get('Location')).toBe('https://example.com/base/c?x=1')
+  })
+
+  test('merges target query string with request query string', async () => {
+    await link('a', 'https://example.com/?utm=x')
+    const res = await serveLink(get('/a?ref=y'), env)
+    const loc = new URL(res!.headers.get('Location')!)
+    expect(loc.searchParams.get('utm')).toBe('x')
+    expect(loc.searchParams.get('ref')).toBe('y')
+  })
+
+  test('longer stored path wins over shorter prefix', async () => {
+    await link('a/b', 'https://exact.com/')
+    await link('a', 'https://prefix.com/')
+    const res = await serveLink(get('/a/b'), env)
+    expect(res!.headers.get('Location')).toBe('https://exact.com/')
+  })
+
+  test('shorter prefix handles unmatched sub-path', async () => {
+    await link('a/b', 'https://exact.com/')
+    await link('a', 'https://prefix.com/')
+    const res = await serveLink(get('/a/c'), env)
+    expect(res!.headers.get('Location')).toBe('https://prefix.com/c')
+  })
+
+  test('internal redirect serves the target file directly', async () => {
+    await createLink(env.DB, {
+      path: 'alias',
+      type: 'redirect',
+      url: '/real',
+      status: 302,
+    })
+    await createLink(env.DB, {
+      path: 'real',
+      type: 'inline_file',
+      contentType: 'image/png',
+      filename: 'img.png',
+      download: false,
+      file: new Uint8Array([1, 2, 3]),
+    })
+    const res = await serveLink(get('/alias'), env)
+    expect(res!.status).toBe(200)
+    expect(res!.headers.get('Content-Type')).toBe('image/png')
+  })
+
+  test('internal redirect chain resolves to external', async () => {
+    await link('a', '/b')
+    await link('b', '/c')
+    await link('c', 'https://final.com/')
+    const res = await serveLink(get('/a'), env)
+    expect(res!.status).toBe(302)
+    expect(res!.headers.get('Location')).toBe('https://final.com/')
+  })
+
+  test('internal redirect preserves sub-path across hops', async () => {
+    await link('a', '/b')
+    await link('b', 'https://final.com/base')
+    const res = await serveLink(get('/a/extra?q=1'), env)
+    expect(res!.headers.get('Location')).toBe('https://final.com/base/extra?q=1')
+  })
+
+  test('internal redirect cycle returns 508', async () => {
+    await link('x', '/y')
+    await link('y', '/x')
+    const res = await serveLink(get('/x'), env)
+    expect(res!.status).toBe(508)
+  })
+
+  test('sub-path request does not match a file link via prefix', async () => {
+    await createLink(env.DB, {
+      path: 'img',
+      type: 'inline_file',
+      contentType: 'image/png',
+      filename: 'img.png',
+      download: false,
+      file: new Uint8Array([0]),
+    })
+    const res = await serveLink(get('/img/something'), env)
+    expect(res).toBeUndefined()
+  })
+})
