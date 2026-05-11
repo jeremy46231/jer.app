@@ -73,17 +73,7 @@ describe('createLink + getLinkWithContent', () => {
     expect(await getLinkWithContent(env.DB, 'nope')).toBeNull()
   })
 
-  // Known bug: the SELECT in `getLinkWithContent` LEFT JOINs link_providers
-  // and aggregates with `json_group_object(lp.provider_id, lp.url)`. When no
-  // providers exist for a path, the LEFT JOIN produces a row of NULLs, which
-  // SQLite serialises as the invalid JSON literal `{:null}`, and JSON.parse
-  // then throws.
-  // Fix idea: change the aggregate to
-  //   `json_group_object(lp.provider_id, lp.url) FILTER (WHERE lp.provider_id IS NOT NULL)`
-  // (or guard the `JSON.parse` call).
-  test.todo(
-    'round-trips an attachment_file link with no providers yet — see SQL bug',
-    async () => {
+  test('round-trips an attachment_file link with no providers yet', async () => {
       await createLink(env.DB, {
         path: 'doc',
         type: 'attachment_file',
@@ -101,8 +91,7 @@ describe('createLink + getLinkWithContent', () => {
       expect(link.providerUrls).toEqual({})
       expect(link.locations).toEqual([])
       expect(link.download).toBe(true)
-    }
-  )
+  })
 
   test('attachment_file aggregates provider urls', async () => {
     await createLink(env.DB, {

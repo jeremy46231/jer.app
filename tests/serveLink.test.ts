@@ -86,12 +86,7 @@ describe('serveLink', () => {
     expect(res!.headers.get('Location')).toBe('https://example.com/')
   })
 
-  // See db.test.ts for the underlying SQL bug. With it in place,
-  // `getLinkWithContent` throws inside `serveLink` for an attachment_file row
-  // that has no provider rows, so we never even reach the 502 fallthrough.
-  test.todo(
-    'attachment_file with no providers returns 502 — depends on SQL fix',
-    async () => {
+  test('attachment_file with no providers returns 502', async () => {
       await createLink(env.DB, {
         path: 'file',
         type: 'attachment_file',
@@ -103,8 +98,7 @@ describe('serveLink', () => {
 
       const res = await serveLink(get('/file'), env)
       expect(res!.status).toBe(502)
-    }
-  )
+  })
 
   test('attachment_file falls through to 502 when no provider can serve it', async () => {
     // Insert a provider row for an unknown id so getLinkWithContent doesn't

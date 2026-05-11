@@ -1,5 +1,10 @@
-const latin1Decoder = new TextDecoder('latin1')
 const utf8Encoder = new TextEncoder()
+
+function bytesToBinaryString(bytes: Uint8Array): string {
+  let s = ''
+  for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]!)
+  return s
+}
 
 export class Base64EncodeStream {
   private leftover = new Uint8Array(0) // mmm leftovers
@@ -18,16 +23,13 @@ export class Base64EncodeStream {
         const toEncode = input.subarray(0, completeLen)
         this.leftover = input.subarray(completeLen)
 
-        // decode raw bytes as latin-1, then btoa -> UTF-8
-        const latin1str = latin1Decoder.decode(toEncode)
-        const b64 = btoa(latin1str)
+        const b64 = btoa(bytesToBinaryString(toEncode))
         controller.enqueue(utf8Encoder.encode(b64))
       },
 
       flush: (controller) => {
         if (this.leftover.length > 0) {
-          const latin1str = latin1Decoder.decode(this.leftover)
-          const b64 = btoa(latin1str) // this will correctly handle padding
+          const b64 = btoa(bytesToBinaryString(this.leftover))
           controller.enqueue(utf8Encoder.encode(b64))
         }
       },

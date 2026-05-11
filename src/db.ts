@@ -16,7 +16,7 @@ export async function getLinks(db: D1Database): Promise<Link[]> {
     .prepare(
       `
         SELECT l.path, l.type, l.redirect_url, l.content_type, l.filename, l.download,
-               json_group_object(lp.provider_id, lp.url) AS provider_urls
+               json_group_object(lp.provider_id, lp.url) FILTER (WHERE lp.provider_id IS NOT NULL) AS provider_urls
         FROM links l
         LEFT JOIN link_providers lp ON lp.path = l.path
         GROUP BY l.path
@@ -85,7 +85,7 @@ export async function getLinkWithContent(
     .prepare(
       `
         SELECT l.path, l.type, l.redirect_url, l.file, l.content_type, l.filename, l.download,
-               json_group_object(lp.provider_id, lp.url) AS provider_urls
+               json_group_object(lp.provider_id, lp.url) FILTER (WHERE lp.provider_id IS NOT NULL) AS provider_urls
         FROM links l
         LEFT JOIN link_providers lp ON lp.path = l.path
         WHERE l.path = ?

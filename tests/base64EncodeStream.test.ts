@@ -83,16 +83,7 @@ describe('Base64EncodeStream', () => {
     expect(await encodeViaStream(bytes)).toBe(expected)
   })
 
-  // Known bug in src/base64EncodeStream.ts: it uses `new TextDecoder('latin1')`
-  // to convert raw bytes into a binary string for `btoa()`. Per the WHATWG
-  // Encoding spec, the "latin1" / "iso-8859-1" labels alias to windows-1252,
-  // which maps several bytes in 0x80..0x9F to high-codepoint characters
-  // (e.g. byte 0x80 -> U+20AC '€'). `btoa()` then rejects them.
-  // Fix idea: build the binary string by hand with `String.fromCharCode(b)`
-  // for each byte instead of going through TextDecoder.
-  test.todo(
-    'handles arbitrary binary bytes (0..255) — see encoder bug',
-    async () => {
+  test('handles arbitrary binary bytes (0..255)', async () => {
       const bytes = new Uint8Array(256)
       for (let i = 0; i < 256; i++) bytes[i] = i
 
@@ -101,8 +92,7 @@ describe('Base64EncodeStream', () => {
       const expected = btoa(bin)
 
       expect(await encodeViaStream(bytes)).toBe(expected)
-    }
-  )
+  })
 
   test('produces correct padding for inputs of length % 3 == 1', async () => {
     // 'A' encodes to 'QQ==' (1 byte -> 2 chars + 2 padding)
@@ -118,10 +108,7 @@ describe('Base64EncodeStream', () => {
     expect(await encodeViaStream('ABC')).toBe('QUJD')
   })
 
-  // Same root cause as the binary-bytes test above: UTF-8 of multibyte text
-  // contains bytes >= 0x80, which the windows-1252 decoder mis-maps before
-  // `btoa()` rejects the result.
-  test.todo('matches btoa() for UTF-8-encoded multibyte text', async () => {
+  test('matches btoa() for UTF-8-encoded multibyte text', async () => {
     const text = '🐈‍⬛ jer.app'
     expect(await encodeViaStream(text)).toBe(btoaUtf8(text))
   })
