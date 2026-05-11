@@ -87,17 +87,17 @@ describe('serveLink', () => {
   })
 
   test('attachment_file with no providers returns 502', async () => {
-      await createLink(env.DB, {
-        path: 'file',
-        type: 'attachment_file',
-        contentType: 'application/octet-stream',
-        filename: 'a.bin',
-        download: false,
-        providerUrls: {},
-      })
+    await createLink(env.DB, {
+      path: 'file',
+      type: 'attachment_file',
+      contentType: 'application/octet-stream',
+      filename: 'a.bin',
+      download: false,
+      providerUrls: {},
+    })
 
-      const res = await serveLink(get('/file'), env)
-      expect(res!.status).toBe(502)
+    const res = await serveLink(get('/file'), env)
+    expect(res!.status).toBe(502)
   })
 
   test('attachment_file falls through to 502 when no provider can serve it', async () => {

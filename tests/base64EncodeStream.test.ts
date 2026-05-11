@@ -84,14 +84,14 @@ describe('Base64EncodeStream', () => {
   })
 
   test('handles arbitrary binary bytes (0..255)', async () => {
-      const bytes = new Uint8Array(256)
-      for (let i = 0; i < 256; i++) bytes[i] = i
+    const bytes = new Uint8Array(256)
+    for (let i = 0; i < 256; i++) bytes[i] = i
 
-      let bin = ''
-      for (const b of bytes) bin += String.fromCharCode(b)
-      const expected = btoa(bin)
+    let bin = ''
+    for (const b of bytes) bin += String.fromCharCode(b)
+    const expected = btoa(bin)
 
-      expect(await encodeViaStream(bytes)).toBe(expected)
+    expect(await encodeViaStream(bytes)).toBe(expected)
   })
 
   test('produces correct padding for inputs of length % 3 == 1', async () => {

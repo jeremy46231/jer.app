@@ -74,23 +74,20 @@ describe('createLink + getLinkWithContent', () => {
   })
 
   test('round-trips an attachment_file link with no providers yet', async () => {
-      await createLink(env.DB, {
-        path: 'doc',
-        type: 'attachment_file',
-        contentType: 'application/pdf',
-        filename: 'doc.pdf',
-        download: true,
-        providerUrls: {},
-      })
+    await createLink(env.DB, {
+      path: 'doc',
+      type: 'attachment_file',
+      contentType: 'application/pdf',
+      filename: 'doc.pdf',
+      download: true,
+      providerUrls: {},
+    })
 
-      const link = (await getLinkWithContent(
-        env.DB,
-        'doc'
-      )) as AttachmentFileLink
-      expect(link.type).toBe('attachment_file')
-      expect(link.providerUrls).toEqual({})
-      expect(link.locations).toEqual([])
-      expect(link.download).toBe(true)
+    const link = (await getLinkWithContent(env.DB, 'doc')) as AttachmentFileLink
+    expect(link.type).toBe('attachment_file')
+    expect(link.providerUrls).toEqual({})
+    expect(link.locations).toEqual([])
+    expect(link.download).toBe(true)
   })
 
   test('attachment_file aggregates provider urls', async () => {
