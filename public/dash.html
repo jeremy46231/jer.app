@@ -13,9 +13,12 @@
       dashboard
     </h1>
 
-    <!-- Add Link Form -->
-    <section class="add-link-section">
-      <h2>Add New Link</h2>
+    <dialog id="link-dialog">
+      <div class="dialog-header">
+        <h2 id="dialog-title">Add New Link</h2>
+        <button id="close-dialog-btn" type="button">✕</button>
+      </div>
+
       <form id="add-link-form" autocomplete="off">
         <div class="form-group">
           <label for="path">Path:</label>
@@ -106,7 +109,7 @@
                 <span>Gofile (unlimited, temporary, slow)</span>
               </label>
             </div>
-            <small
+            <small id="locations-help"
               >Select one or more storage locations. Files will be uploaded to
               all selected providers for redundancy.</small
             >
@@ -155,8 +158,15 @@
           </div>
         </div>
 
-        <button type="submit">Create Link</button>
+        <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem">
+          <button type="submit" id="submit-btn">Create Link</button>
+          <button type="button" id="cancel-btn">Cancel</button>
+        </div>
       </form>
+    </dialog>
+
+    <section>
+      <button id="open-dialog-btn" type="button">+ Add New Link</button>
     </section>
 
     <section>

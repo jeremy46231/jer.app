@@ -13,10 +13,14 @@ import {
  * @typedef {import('../../shared-types.js').FileLocation} FileLocation
  */
 
-/** @type {HTMLTableSectionElement} */
-const linksTableBody = getElementById('links-tbody')
+/** @type {HTMLDialogElement} */
+const dialog = getElementById('link-dialog')
+/** @type {HTMLHeadingElement} */
+const dialogTitle = getElementById('dialog-title')
 /** @type {HTMLFormElement} */
 const addLinkForm = getElementById('add-link-form')
+/** @type {HTMLButtonElement} */
+const submitBtn = assertAny(addLinkForm.querySelector('#submit-btn'))
 /** @type {HTMLInputElement} */
 const pathInput = getElementById('path')
 /** @type {HTMLSelectElement} */
@@ -38,6 +42,8 @@ const textInput = getElementById('text')
 /** @type {NodeListOf<HTMLInputElement>} */
 const locationCheckboxes = document.querySelectorAll('input[name="locations"]')
 /** @type {HTMLElement} */
+const locationsHelp = getElementById('locations-help')
+/** @type {HTMLElement} */
 const filenameHelp = getElementById('filename-help')
 /** @type {HTMLInputElement} */
 const contentTypeInput = getElementById('content-type')
@@ -47,25 +53,114 @@ const contentTypeHelp = getElementById('content-type-help')
 const redirectStatusGroup =
   getElementById('redirect-status').closest('.form-group')
 
+/** @type {string | null} null = create mode, string = path of link being edited */
+let editingPath = null
+/** @type {string | null} original stored type of link being edited */
+let editingLinkType = null
+
+// ── Dialog open/close ─────────────────────────────────────────────────────────
+
 /**
- * Shows or hides form fields based on selected link type
+ * Opens the dialog, optionally pre-populated for editing.
+ * @param {Link | null} [linkData]
  */
+function openDialog(linkData) {
+  addLinkForm.reset()
+
+  if (linkData) {
+    editingPath = linkData.path
+    editingLinkType = linkData.type
+    dialogTitle.textContent = 'Edit Link'
+    submitBtn.textContent = 'Save Changes'
+    pathInput.value = linkData.path
+
+    if (linkData.type === 'redirect') {
+      typeSelect.value = 'redirect'
+      handleTypeChange()
+      urlInput.value = linkData.url
+      getElementById('redirect-status').value = String(
+        any(linkData).status ?? 302
+      )
+      urlInput.dispatchEvent(new Event('input'))
+    } else if (
+      linkData.type === 'inline_file' ||
+      linkData.type === 'attachment_file'
+    ) {
+      typeSelect.value = 'file'
+      handleTypeChange()
+
+      const currentLocations =
+        linkData.type === 'inline_file'
+          ? ['inline']
+          : (any(linkData).locations ?? [])
+
+      setLocationCheckboxesForEdit(currentLocations, linkData.type)
+      locationsHelp.textContent =
+        'Add or remove providers. Select a new file to replace the file content.'
+
+      getElementById('filename').value = any(linkData).filename ?? ''
+      contentTypeInput.value = any(linkData).contentType ?? ''
+      getElementById('download').checked = !!any(linkData).download
+    }
+  } else {
+    editingPath = null
+    editingLinkType = null
+    dialogTitle.textContent = 'Add New Link'
+    submitBtn.textContent = 'Create Link'
+    handleTypeChange()
+    updateFilenameHelp()
+  }
+
+  dialog.showModal()
+}
+
+function closeDialog() {
+  dialog.close()
+  addLinkForm.reset()
+  editingPath = null
+  editingLinkType = null
+  dialogTitle.textContent = 'Add New Link'
+  submitBtn.textContent = 'Create Link'
+  handleTypeChange()
+  updateFilenameHelp()
+  resetLocationCheckboxes()
+}
+
+/**
+ * Pre-check location checkboxes for edit mode.
+ * 'inline' is always checked+disabled for inline_file links (implicit storage).
+ * All other checkboxes are enabled so providers can be freely added or removed.
+ * @param {string[]} currentLocations
+ * @param {string} storedType
+ */
+function setLocationCheckboxesForEdit(currentLocations, storedType) {
+  locationCheckboxes.forEach((cb) => {
+    cb.checked = currentLocations.includes(cb.value)
+    cb.disabled = cb.value === 'inline' && storedType === 'inline_file'
+  })
+}
+
+/** Restore all location checkboxes to their default create-mode state. */
+function resetLocationCheckboxes() {
+  locationCheckboxes.forEach((cb) => {
+    cb.disabled = false
+    cb.checked = cb.value === 'inline'
+  })
+}
+
+// ── Form field visibility ─────────────────────────────────────────────────────
+
 function handleTypeChange() {
   const selectedType = typeSelect.value
 
-  // Hide all type-specific fields
   redirectFields.style.display = 'none'
   fileFields.style.display = 'none'
-
-  // Clear validation requirements
   urlInput.required = false
   fileInput.required = false
-
-  // Hide both file and text input groups
+  textInput.required = false
   fileInputGroup.style.display = 'none'
   textInputGroup.style.display = 'none'
 
-  // Show relevant fields and set validation
   switch (selectedType) {
     case 'redirect':
       redirectFields.style.display = 'block'
@@ -74,7 +169,7 @@ function handleTypeChange() {
     case 'file':
       fileFields.style.display = 'block'
       fileInputGroup.style.display = 'block'
-      fileInput.required = true
+      if (editingPath === null) fileInput.required = true
       contentTypeHelp.textContent =
         'Leave blank to use the browser-provided default'
       filenameHelp.textContent = 'Leave empty to use the original filename'
@@ -82,19 +177,25 @@ function handleTypeChange() {
     case 'text':
       fileFields.style.display = 'block'
       textInputGroup.style.display = 'block'
-      textInput.required = true
+      if (editingPath === null) textInput.required = true
       contentTypeHelp.textContent = 'Defaults to text/plain'
       updateFilenameHelp()
       break
   }
 }
 
+// ── Form submission ───────────────────────────────────────────────────────────
+
 /**
- * Handles form submission
  * @param {Event} event
  */
 async function handleFormSubmit(event) {
   event.preventDefault()
+
+  if (editingPath !== null) {
+    await submitEdit()
+    return
+  }
 
   const formData = new FormData(addLinkForm)
   /** @type {string} */
@@ -107,7 +208,6 @@ async function handleFormSubmit(event) {
     return
   }
 
-  // Show loading state
   /** @type {HTMLButtonElement} */
   const submitButtonElement = any(
     addLinkForm.querySelector('button[type="submit"]')
@@ -143,15 +243,13 @@ async function handleFormSubmit(event) {
 
       if (response.ok) {
         showMessage('Link created successfully!', 'success')
-        addLinkForm.reset()
-        handleTypeChange() // Reset form state
-        await renderLinks() // Refresh the links table
+        closeDialog()
+        await renderLinks()
       } else {
         const errorText = await response.text()
         showMessage(`Error creating link: ${errorText}`, 'error')
       }
     } else if (type === 'file' || type === 'text') {
-      // Get selected locations from checkboxes
       const selectedLocations = Array.from(locationCheckboxes)
         .filter((checkbox) => checkbox.checked)
         .map((checkbox) => checkbox.value)
@@ -171,25 +269,21 @@ async function handleFormSubmit(event) {
       let defaultContentType
 
       if (type === 'text') {
-        // Handle text input
         const textContent = formData.get('text')
         if (!textContent || typeof textContent !== 'string') {
           showMessage('Text content is required for text links', 'error')
           return
         }
 
-        // Create a Blob from the text content
         fileToUpload = new Blob([textContent], { type: 'text/plain' })
         defaultContentType = 'text/plain'
 
-        // Use provided filename or generate smart default based on content type and path
         if (!filename || typeof filename !== 'string') {
           const actualContentType = contentType || defaultContentType
           const extension = getExtensionFromContentType(actualContentType)
           filename = `${path}.${extension}`
         }
       } else {
-        // Handle file input
         /** @type {File | null} */
         const file = any(formData.get('file'))
         if (!file) {
@@ -200,28 +294,22 @@ async function handleFormSubmit(event) {
         fileToUpload = file
         defaultContentType = file.type || 'application/octet-stream'
 
-        // Use original filename if not provided
         if (!filename || typeof filename !== 'string') {
           filename = file.name
         }
       }
 
-      // Use provided content type or default
       if (!contentType || typeof contentType !== 'string') {
         contentType = defaultContentType
       }
 
-      // Build URL with query parameters
       const uploadUrl = new URL('/api/links/upload', window.location.href)
       uploadUrl.searchParams.set('path', path)
       uploadUrl.searchParams.set('content-type', contentType)
       uploadUrl.searchParams.set('filename', filename)
-
-      // Add each selected location as a separate parameter
       selectedLocations.forEach((location) => {
         uploadUrl.searchParams.append('locations', location)
       })
-
       uploadUrl.searchParams.set('download', download.toString())
 
       const response = await uploadWithProgress(
@@ -237,30 +325,25 @@ async function handleFormSubmit(event) {
       )
 
       if (response.ok || response.status === 207) {
-        // 207 is Multi-Status for partial success
         try {
           const result = await response.json()
           if (result.failed && result.failed.length > 0) {
-            // Partial success - some providers failed
             const successMsg = `${type === 'text' ? 'Text' : 'File'} link created successfully!`
             const failMsg = `Some storage providers failed: ${result.failed.map((/** @type {any} */ f) => f.location).join(', ')}`
             showMessage(`${successMsg} ${failMsg}`, 'info')
           } else {
-            // Full success
             showMessage(
               `${type === 'text' ? 'Text' : 'File'} link created successfully!`,
               'success'
             )
           }
         } catch (e) {
-          // Fallback for plain text responses
           showMessage(
             `${type === 'text' ? 'Text' : 'File'} link created successfully!`,
             'success'
           )
         }
-        addLinkForm.reset()
-        handleTypeChange()
+        closeDialog()
         await renderLinks()
       } else {
         try {
@@ -282,7 +365,6 @@ async function handleFormSubmit(event) {
       error instanceof Error ? error.message : 'Unknown error occurred'
     showMessage(`Error creating link: ${errorMessage}`, 'error')
   } finally {
-    // Reset button state
     if (submitButtonElement) {
       submitButtonElement.textContent = originalText
       submitButtonElement.disabled = false
@@ -290,8 +372,183 @@ async function handleFormSubmit(event) {
   }
 }
 
+async function submitEdit() {
+  const formData = new FormData(addLinkForm)
+  const type = any(formData.get('type'))
+  const newPath = any(formData.get('path'))
+  const oldPath = editingPath
+
+  if (!type || !newPath) {
+    showMessage('Please fill in all required fields', 'error')
+    return
+  }
+
+  /** @type {HTMLButtonElement} */
+  const submitButtonElement = any(addLinkForm.querySelector('#submit-btn'))
+  const originalText = submitButtonElement.textContent
+  submitButtonElement.textContent = 'Saving...'
+  submitButtonElement.disabled = true
+
+  try {
+    if (type === 'redirect') {
+      const linkUrl = formData.get('url')
+      if (!linkUrl) {
+        showMessage('URL is required for redirect links', 'error')
+        return
+      }
+      const status = Number(formData.get('redirect-status')) || 302
+      const response = await fetch('/api/links', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          oldPath,
+          path: newPath,
+          type: 'redirect',
+          url: linkUrl,
+          status,
+        }),
+      })
+      if (response.ok) {
+        showMessage('Link updated!', 'success')
+        closeDialog()
+        await renderLinks()
+      } else {
+        showMessage(`Error: ${await response.text()}`, 'error')
+      }
+    } else if (type === 'file' || type === 'text') {
+      const selectedLocations = Array.from(locationCheckboxes)
+        .filter((cb) => cb.checked)
+        .map((cb) => cb.value)
+
+      if (selectedLocations.length === 0) {
+        showMessage('Please select at least one storage location', 'error')
+        return
+      }
+
+      let filename = any(formData.get('filename'))
+      let contentType = any(formData.get('content-type'))
+      const download = formData.get('download') === 'on'
+
+      const hasNewFile =
+        type === 'file' && fileInput.files && fileInput.files.length > 0
+      const textContent = type === 'text' ? any(formData.get('text')) : null
+      const hasNewText = type === 'text' && !!textContent
+
+      if (hasNewFile || hasNewText) {
+        // Re-upload with new file content
+        let fileToUpload
+        let defaultContentType
+
+        if (hasNewText) {
+          fileToUpload = new Blob([textContent], { type: 'text/plain' })
+          defaultContentType = 'text/plain'
+          if (!filename) {
+            const ext = getExtensionFromContentType(
+              contentType || defaultContentType
+            )
+            filename = `${newPath}.${ext}`
+          }
+        } else {
+          const file = fileInput.files[0]
+          fileToUpload = file
+          defaultContentType = file.type || 'application/octet-stream'
+          if (!filename) filename = file.name
+        }
+
+        if (!contentType) contentType = defaultContentType
+
+        const uploadUrl = new URL('/api/links/upload', window.location.href)
+        uploadUrl.searchParams.set('old-path', oldPath)
+        uploadUrl.searchParams.set('path', newPath)
+        uploadUrl.searchParams.set('content-type', contentType)
+        uploadUrl.searchParams.set('filename', filename)
+        selectedLocations.forEach((l) =>
+          uploadUrl.searchParams.append('locations', l)
+        )
+        uploadUrl.searchParams.set('download', download.toString())
+
+        const response = await uploadWithProgress(
+          uploadUrl.toString(),
+          fileToUpload,
+          (progress) => {
+            if (progress === 100) showMessage('Processing...', 'info')
+            else showMessage(`Uploading... ${progress.toFixed(0)}%`, 'info')
+          },
+          'PUT'
+        )
+
+        if (response.ok || response.status === 207) {
+          try {
+            const result = await response.json()
+            if (result.failed && result.failed.length > 0) {
+              showMessage(
+                `Link updated! Some providers failed: ${result.failed.map((/** @type {any} */ f) => f.location).join(', ')}`,
+                'info'
+              )
+            } else {
+              showMessage('Link updated!', 'success')
+            }
+          } catch {
+            showMessage('Link updated!', 'success')
+          }
+          closeDialog()
+          await renderLinks()
+        } else {
+          try {
+            const errorData = await response.json()
+            showMessage(`Error: ${errorData.error || 'Unknown error'}`, 'error')
+          } catch {
+            showMessage(`Error: ${await response.text()}`, 'error')
+          }
+        }
+      } else {
+        // Metadata-only update (no new file selected)
+        if (!contentType) contentType = 'application/octet-stream'
+        if (!filename) filename = newPath
+
+        const storedType =
+          editingLinkType === 'inline_file' ? 'inline_file' : 'attachment_file'
+
+        const response = await fetch('/api/links', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            oldPath,
+            path: newPath,
+            type: storedType,
+            contentType,
+            filename,
+            download,
+            locations: selectedLocations,
+          }),
+        })
+
+        if (response.ok) {
+          showMessage('Link updated!', 'success')
+          closeDialog()
+          await renderLinks()
+        } else {
+          showMessage(`Error: ${await response.text()}`, 'error')
+        }
+      }
+    } else {
+      showMessage('Please select a valid link type', 'error')
+    }
+  } catch (error) {
+    console.error('Error updating link:', error)
+    showMessage(
+      `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      'error'
+    )
+  } finally {
+    submitButtonElement.textContent = originalText
+    submitButtonElement.disabled = false
+  }
+}
+
+// ── Delete ────────────────────────────────────────────────────────────────────
+
 /**
- * Handles deleting a link
  * @param {string} path
  */
 async function handleDeleteLink(path) {
@@ -330,8 +587,30 @@ async function handleDeleteLink(path) {
 }
 
 /**
- * Fetches links from the API.
- * @returns {Promise<Link[]>} A promise that resolves to an array of links.
+ * @param {string} path
+ */
+async function handleEditLink(path) {
+  try {
+    const response = await fetch(`/api/links/${encodeURIComponent(path)}`)
+    if (!response.ok) {
+      showMessage(`Error loading link: ${response.statusText}`, 'error')
+      return
+    }
+    const linkData = await response.json()
+    openDialog(linkData)
+  } catch (error) {
+    console.error('Error loading link for edit:', error)
+    showMessage(
+      `Error loading link: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      'error'
+    )
+  }
+}
+
+// ── Links table ───────────────────────────────────────────────────────────────
+
+/**
+ * @returns {Promise<Link[]>}
  */
 async function getLinks() {
   const response = await fetch('/api/links')
@@ -358,7 +637,6 @@ async function renderLinks() {
   try {
     /** @type {Link[]} */
     const links = await getLinks()
-    console.log('Links:', links)
     linksTableBody.innerHTML = ''
 
     if (links.length === 0) {
@@ -393,7 +671,7 @@ async function renderLinks() {
             `
           )
           break
-        case 'inline_file':
+        case 'inline_file': {
           const inlineDownloadText = link.download ? ' (force download)' : ''
           row.insertAdjacentHTML(
             'beforeend',
@@ -407,17 +685,15 @@ async function renderLinks() {
             `
           )
           break
-        case 'attachment_file':
+        }
+        case 'attachment_file': {
           const attachmentDownloadText = link.download
             ? ' (force download)'
             : ''
-
-          // Show available storage locations
           const locationsText =
             link.locations && link.locations.length > 0
               ? ` [Available: ${link.locations.join(', ')}]`
               : ''
-
           row.insertAdjacentHTML(
             'beforeend',
             html`
@@ -430,6 +706,7 @@ async function renderLinks() {
             `
           )
           break
+        }
         default:
           // @ts-ignore
           console.warn(`Unknown link type: ${link.type}`)
@@ -437,21 +714,24 @@ async function renderLinks() {
           break
       }
 
-      // Add delete button as the last column
       row.insertAdjacentHTML(
         'beforeend',
         html`
-          <td>
+          <td style="white-space: nowrap">
+            <button class="edit-btn" title="Edit link">Edit</button>
             <button class="delete-btn" title="Delete link">❌</button>
           </td>
         `
       )
 
       /** @type {HTMLButtonElement} */
+      const editButton = assertAny(row.querySelector('.edit-btn'))
+      editButton.addEventListener('click', () => handleEditLink(link.path))
+
+      /** @type {HTMLButtonElement} */
       const deleteButton = assertAny(row.querySelector('.delete-btn'))
-      deleteButton.addEventListener('click', () => {
-        handleDeleteLink(link.path)
-      })
+      deleteButton.addEventListener('click', () => handleDeleteLink(link.path))
+
       linksTableBody.appendChild(row)
     })
   } catch (error) {
@@ -467,16 +747,19 @@ async function renderLinks() {
   }
 }
 
+/** @type {HTMLTableSectionElement} */
+const linksTableBody = getElementById('links-tbody')
+
+// ── Messages ──────────────────────────────────────────────────────────────────
+
 /** @type {ReturnType<typeof setTimeout> | null} */
 let messageTimeout = null
 
 /**
- * Shows a message to the user
  * @param {string} message
  * @param {'success' | 'error' | 'info'} type
  */
 export function showMessage(message, type) {
-  // Remove existing messages
   const existingMessages = document.querySelectorAll(
     '.success-message, .error-message, .info-message'
   )
@@ -489,14 +772,8 @@ export function showMessage(message, type) {
   const messageDiv = document.createElement('div')
   messageDiv.className = `${type}-message`
   messageDiv.textContent = message
+  document.body.appendChild(messageDiv)
 
-  // Insert before the form
-  const addLinkSection = document.querySelector('.add-link-section')
-  if (addLinkSection) {
-    addLinkSection.insertBefore(messageDiv, addLinkForm)
-  }
-
-  // Auto-remove success messages after 5 seconds
   if (type === 'success') {
     messageTimeout = setTimeout(() => {
       messageDiv.remove()
@@ -504,9 +781,54 @@ export function showMessage(message, type) {
   }
 }
 
+// ── Text content fetch ────────────────────────────────────────────────────────
+
 /**
- * Updates filename help text based on current content type
+ * Returns true if the content type is human-readable text.
+ * @param {string} ct
  */
+function isTextContentType(ct) {
+  if (!ct) return false
+  const norm = ct.split(';')[0].trim().toLowerCase()
+  return (
+    norm.startsWith('text/') ||
+    norm === 'application/json' ||
+    norm === 'application/javascript' ||
+    norm === 'application/xml' ||
+    norm === 'image/svg+xml'
+  )
+}
+
+/**
+ * When switching to Text type in edit mode, auto-fetch the current file
+ * content and populate the textarea so the user can edit it in place.
+ */
+async function maybeFetchTextContent() {
+  if (editingPath === null) return
+  if (typeSelect.value !== 'text') return
+  if (!isTextContentType(contentTypeInput.value)) return
+
+  textInput.value = ''
+  textInput.disabled = true
+  textInput.placeholder = 'Loading…'
+
+  try {
+    const response = await fetch(`/${encodeURIComponent(editingPath)}`)
+    if (response.ok) {
+      textInput.value = await response.text()
+    } else {
+      showMessage('Could not load file content for editing', 'error')
+    }
+  } catch {
+    showMessage('Could not load file content for editing', 'error')
+  } finally {
+    textInput.disabled = false
+    textInput.placeholder = 'Enter text content here'
+  }
+}
+
+// ── Filename help text ────────────────────────────────────────────────────────
+
 function updateFilenameHelp() {
   if (typeSelect.value === 'text') {
     const contentType = contentTypeInput.value || 'text/plain'
@@ -516,16 +838,24 @@ function updateFilenameHelp() {
   }
 }
 
-// Set up event listeners
-typeSelect.addEventListener('change', handleTypeChange)
+// ── Event listeners ───────────────────────────────────────────────────────────
+
+getElementById('open-dialog-btn').addEventListener('click', () =>
+  openDialog(null)
+)
+getElementById('close-dialog-btn').addEventListener('click', closeDialog)
+getElementById('cancel-btn').addEventListener('click', closeDialog)
+
+typeSelect.addEventListener('change', () => {
+  handleTypeChange()
+  maybeFetchTextContent()
+})
 urlInput.addEventListener('input', () => {
   redirectStatusGroup.style.display = urlInput.value.startsWith('/')
     ? 'none'
     : ''
 })
 addLinkForm.addEventListener('submit', handleFormSubmit)
-
-// Add event listener for content type changes to update filename help
 contentTypeInput.addEventListener('input', updateFilenameHelp)
 pathInput.addEventListener('input', updateFilenameHelp)
 

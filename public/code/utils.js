@@ -93,9 +93,10 @@ export function assertAny(value) {
  * @param {string} url - The upload URL
  * @param {Blob|File} file - The file to upload
  * @param {function(number): void} onProgress - Progress callback (0-100)
+ * @param {'POST'|'PUT'} [method='POST']
  * @returns {Promise<any>} - Promise that resolves to a Response-like object
  */
-export function uploadWithProgress(url, file, onProgress) {
+export function uploadWithProgress(url, file, onProgress, method = 'POST') {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest()
 
@@ -127,7 +128,7 @@ export function uploadWithProgress(url, file, onProgress) {
       reject(new Error('Upload aborted'))
     })
 
-    xhr.open('POST', url)
+    xhr.open(method, url)
     xhr.send(file)
   })
 }
