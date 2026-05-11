@@ -1,5 +1,10 @@
 import { handleAPI } from './api'
-import { requireAuth, checkPassword, sessionCookie, clearSessionCookie } from './auth'
+import {
+  requireAuth,
+  checkPassword,
+  sessionCookie,
+  clearSessionCookie,
+} from './auth'
 import { serveLink } from './serveLink'
 
 export default {
@@ -10,7 +15,10 @@ export default {
       if (url.pathname === '/logout') {
         return new Response(null, {
           status: 303,
-          headers: { Location: '/login.html', 'Set-Cookie': clearSessionCookie() },
+          headers: {
+            'Location': '/login.html',
+            'Set-Cookie': clearSessionCookie(),
+          },
         })
       }
 
@@ -21,7 +29,7 @@ export default {
           return new Response(null, {
             status: 303,
             headers: {
-              Location: '/dash',
+              'Location': '/dash',
               'Set-Cookie': sessionCookie(env.ADMIN_PASSWORD, request),
             },
           })

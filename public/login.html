@@ -12,9 +12,17 @@
       <form action="/api/login" method="POST" autocomplete="off">
         <div class="form-group">
           <label for="password">Password:</label>
-          <input type="password" id="password" name="password" autofocus autocomplete="current-password" />
+          <input
+            type="password"
+            id="password"
+            name="password"
+            autofocus
+            autocomplete="current-password"
+          />
         </div>
-        <p id="err" style="color: red; margin-bottom: 1rem; display: none">Wrong password.</p>
+        <p id="err" style="color: red; margin-bottom: 1rem; display: none">
+          Wrong password.
+        </p>
         <button type="submit">Sign in</button>
       </form>
     </section>

@@ -44,7 +44,12 @@ export async function handleAPI(
         if (!path || !type || type !== 'redirect' || !url) {
           return new Response('Missing required fields', { status: 400 })
         }
-        await createLink(env.DB, { path, type: 'redirect', url, status: status ?? 302 })
+        await createLink(env.DB, {
+          path,
+          type: 'redirect',
+          url,
+          status: status ?? 302,
+        })
         return new Response('Link created successfully', { status: 201 })
       default:
         return new Response('Unsupported link type', { status: 400 })
