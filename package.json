@@ -2,6 +2,7 @@
   "name": "jer-app",
   "version": "0.0.0",
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@types/bun": "^1.2.18",
     "htm": "^3.1.1",
     "prettier": "^3.6.2",
@@ -16,9 +17,12 @@
     "format": "prettier --write .",
     "cf-typegen": "wrangler types && prettier --write worker-configuration.d.ts",
     "db:migrations:apply": "wrangler d1 migrations apply DB --remote",
-    "test": "bun test tests",
-    "test:all": "TEST_NETWORK=1 bun test tests",
-    "test:watch": "bun test tests --watch"
+    "test": "bun test ./tests/*.test.ts ./tests/providers",
+    "test:all": "TEST_NETWORK=1 bun test ./tests/*.test.ts ./tests/providers",
+    "test:watch": "bun test ./tests/*.test.ts ./tests/providers --watch",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed"
   },
   "dependencies": {
     "wrangler": "^4.24.3"
