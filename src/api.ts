@@ -84,12 +84,14 @@ export async function handleAPI(
       return new Response('File is required', { status: 400 })
     }
 
+    const isInlineOnly = locations.length === 1 && locations[0] === 'inline'
     await createLink(env.DB, {
       path,
-      type: 'attachment_file',
+      type: isInlineOnly ? 'inline_file' : 'attachment_file',
       contentType,
       filename,
       download,
+      ...(isInlineOnly ? { file: new Uint8Array() } : {}),
     })
 
     // Clone the request body stream for each provider
