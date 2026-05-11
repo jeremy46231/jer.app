@@ -67,78 +67,41 @@ Content-Type: application/octet-stream
     link: LinkWithContent,
     requestHeaders: Headers
   ): Promise<Response | null> {
-    try {
-      const attachmentLink = link as AttachmentFileLink
-      const url = attachmentLink.gofileUrl
-      if (!url) {
-        return null
-      }
-
-      // We must obtain a guest token from the accounts endpoint,
-      // then use that token and the webToken from the global.js script
-      // to access the contents route. Accessing the contents route
-      // with a token also authorizes that token to download the file
-      // from the direct link.
-
-      const folderCode = url.replace('https://gofile.io/d/', '')
-
-      const accountsResponse = await fetch('https://api.gofile.io/accounts', {
-        method: 'POST',
-      })
-      if (!accountsResponse.ok) {
-        console.error(`Failed to get Gofile account token: ${accountsResponse.statusText}`)
-        return null
-      }
-      const accountsJson = (await accountsResponse.json()) as any
-      const token = accountsJson?.data?.token
-      if (typeof token !== 'string') {
-        console.error('Invalid response from Gofile: missing token')
-        return null
-      }
-
-      const script = await (
-        await fetch('https://gofile.io/dist/js/global.js')
-      ).text()
-      const webToken = script.match(/appdata\.wt = "([^\n"]+)"/)?.[1]
-      if (!webToken) {
-        console.error('Failed to extract web token from Gofile script')
-        return null
-      }
-
-      const contentsURL = `https://api.gofile.io/contents/${folderCode}?wt=${webToken}`
-      const contentsResult = await fetch(contentsURL, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-      if (!contentsResult.ok) {
-        console.error(`Failed to get Gofile contents: ${contentsResult.statusText}`)
-        return null
-      }
-
-      const contentsJson = (await contentsResult.json()) as any
-      const files = contentsJson?.data?.children
-      if (!files || typeof files !== 'object' || Object.keys(files).length === 0) {
-        console.error('No files found in Gofile contents')
-        return null
-      }
-      const firstFile = Object.values(files)[0] as any
-      if (!firstFile || !firstFile.link) {
-        console.error('No valid file link found in Gofile contents')
-        return null
-      }
-      const downloadUrl = firstFile.link as string
-
-      const downloadHeaders = new Headers(requestHeaders)
-      downloadHeaders.set('Cookie', `accountToken=${token}`)
-      const fileResponse = await fetch(downloadUrl, {
-        headers: downloadHeaders,
-      })
-
-      return fileResponse
-    } catch (error) {
-      console.error('Gofile download failed:', error)
+    const attachmentLink = link as AttachmentFileLink
+    const url = attachmentLink.gofileUrl
+    if (!url) {
       return null
     }
+
+    // Gofile's contents API now requires a premium account, so direct proxying
+    // is broken. Redirect to their download page instead.
+    // Original proxy logic (requires premium):
+    // try {
+    //   const folderCode = url.replace('https://gofile.io/d/', '')
+    //   const accountsResponse = await fetch('https://api.gofile.io/accounts', { method: 'POST' })
+    //   if (!accountsResponse.ok) { console.error(`Failed to get Gofile account token: ${accountsResponse.statusText}`); return null }
+    //   const accountsJson = (await accountsResponse.json()) as any
+    //   const token = accountsJson?.data?.token
+    //   if (typeof token !== 'string') { console.error('Invalid response from Gofile: missing token'); return null }
+    //   const script = await (await fetch('https://gofile.io/dist/js/global.js')).text()
+    //   const webToken = script.match(/appdata\.wt = "([^\n"]+)"/)?.[1]
+    //   if (!webToken) { console.error('Failed to extract web token from Gofile script'); return null }
+    //   const contentsURL = `https://api.gofile.io/contents/${folderCode}?wt=${webToken}`
+    //   const contentsResult = await fetch(contentsURL, { headers: { Authorization: `Bearer ${token}` } })
+    //   if (!contentsResult.ok) { console.error(`Failed to get Gofile contents: ${contentsResult.statusText}`); return null }
+    //   const contentsJson = (await contentsResult.json()) as any
+    //   const files = contentsJson?.data?.children
+    //   if (!files || typeof files !== 'object' || Object.keys(files).length === 0) { console.error('No files found in Gofile contents'); return null }
+    //   const firstFile = Object.values(files)[0] as any
+    //   if (!firstFile || !firstFile.link) { console.error('No valid file link found in Gofile contents'); return null }
+    //   const downloadUrl = firstFile.link as string
+    //   const downloadHeaders = new Headers(requestHeaders)
+    //   downloadHeaders.set('Cookie', `accountToken=${token}`)
+    //   return await fetch(downloadUrl, { headers: downloadHeaders })
+    // } catch (error) { console.error('Gofile download failed:', error); return null }
+    return new Response(null, {
+      status: 302,
+      headers: { Location: url },
+    })
   }
 }

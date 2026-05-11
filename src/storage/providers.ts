@@ -9,14 +9,14 @@ export const providerMap = new Map<string, AbstractStorageProvider>()
 const addProvider = (p: AbstractStorageProvider) => providerMap.set(p.id, p)
 
 addProvider(new InlineStorageProvider())
-addProvider(new HcCdnStorageProvider())
+// addProvider(new HcCdnStorageProvider()) // disabled: broken
 addProvider(new CatboxStorageProvider())
 addProvider(new LitterboxStorageProvider())
 addProvider(new GofileStorageProvider())
 
 export const downloadPriority: readonly AbstractStorageProvider[] = [
   providerMap.get('inline')!,
-  providerMap.get('hc-cdn')!,
+  new HcCdnStorageProvider(), // uploads disabled but existing files still downloadable
   providerMap.get('catbox')!,
   providerMap.get('litterbox')!,
   providerMap.get('gofile')!,
