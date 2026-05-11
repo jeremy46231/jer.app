@@ -331,8 +331,13 @@ export async function handleAPI(
         }
       }
 
+      // If external providers were added to an inline_file, promote it to
+      // attachment_file so the table (and getLinks) surfaces those providers.
+      const finalType =
+        type === 'inline_file' && added.length > 0 ? 'attachment_file' : type
+
       linkData =
-        type === 'inline_file'
+        finalType === 'inline_file'
           ? {
               path: newPath,
               type: 'inline_file',
