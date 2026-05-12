@@ -378,7 +378,7 @@ async function submitEdit() {
   const newPath = any(formData.get('path'))
   const oldPath = editingPath
 
-  if (!type || !newPath) {
+  if (!type || !newPath || oldPath === null) {
     showMessage('Please fill in all required fields', 'error')
     return
   }
@@ -449,7 +449,9 @@ async function submitEdit() {
             filename = `${newPath}.${ext}`
           }
         } else {
-          const file = fileInput.files[0]
+          const files = fileInput.files
+          if (!files) return
+          const file = files[0]
           fileToUpload = file
           defaultContentType = file.type || 'application/octet-stream'
           if (!filename) filename = file.name

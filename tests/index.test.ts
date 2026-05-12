@@ -57,6 +57,7 @@ describe('worker entry (fetch handler)', () => {
       path: 'g',
       type: 'redirect',
       url: 'https://example.com/x',
+      status: 302,
     })
 
     const res = await fetchWith('/g')
