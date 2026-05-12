@@ -1,7 +1,7 @@
 import { AbstractStorageProvider } from '../AbstractStorageProvider'
 import type {
   LinkWithContent,
-  InlineFileLinkWithContent,
+  FileLinkWithContent,
 } from '../../../shared-types'
 
 export class InlineStorageProvider extends AbstractStorageProvider {
@@ -9,9 +9,7 @@ export class InlineStorageProvider extends AbstractStorageProvider {
   readonly name = 'Database (Inline)'
 
   has(link: LinkWithContent): boolean {
-    return (
-      link.type === 'inline_file' && !!(link as InlineFileLinkWithContent).file
-    )
+    return link.type === 'file' && !!(link as FileLinkWithContent).file?.length
   }
 
   async upload(
@@ -22,7 +20,6 @@ export class InlineStorageProvider extends AbstractStorageProvider {
     db: D1Database
   ): Promise<void> {
     try {
-      // Read the stream into a Uint8Array
       const reader = file.getReader()
       const chunks: Uint8Array[] = []
       let totalLength = 0
@@ -34,7 +31,6 @@ export class InlineStorageProvider extends AbstractStorageProvider {
         totalLength += value.length
       }
 
-      // Combine all chunks into a single Uint8Array
       const fileData = new Uint8Array(totalLength)
       let offset = 0
       for (const chunk of chunks) {
@@ -42,7 +38,6 @@ export class InlineStorageProvider extends AbstractStorageProvider {
         offset += chunk.length
       }
 
-      // Update the database with the file data
       await db
         .prepare('UPDATE links SET file = ? WHERE path = ?')
         .bind(fileData, linkPath)
@@ -59,36 +54,20 @@ export class InlineStorageProvider extends AbstractStorageProvider {
     requestHeaders: Headers
   ): Promise<Response | null> {
     try {
-      if (link.type !== 'inline_file') {
-        return null
-      }
+      if (link.type !== 'file') return null
 
-      const inlineLink = link as InlineFileLinkWithContent
-      if (!inlineLink.file || inlineLink.file.length === 0) {
-        return null
-      }
+      const fileLink = link as FileLinkWithContent
+      if (!fileLink.file?.length) return null
 
-      // Create a response with the file data
       const headers = new Headers()
-      headers.set('Content-Type', inlineLink.contentType)
-      headers.set('Content-Length', inlineLink.file.length.toString())
+      headers.set('Content-Type', fileLink.contentType)
+      headers.set('Content-Length', fileLink.file.length.toString())
+      headers.set(
+        'Content-Disposition',
+        `${fileLink.download ? 'attachment' : 'inline'}; filename="${fileLink.filename}"`
+      )
 
-      if (inlineLink.download) {
-        headers.set(
-          'Content-Disposition',
-          `attachment; filename="${inlineLink.filename}"`
-        )
-      } else {
-        headers.set(
-          'Content-Disposition',
-          `inline; filename="${inlineLink.filename}"`
-        )
-      }
-
-      return new Response(inlineLink.file, {
-        status: 200,
-        headers,
-      })
+      return new Response(fileLink.file, { status: 200, headers })
     } catch (error) {
       console.error('Inline storage download failed:', error)
       return null

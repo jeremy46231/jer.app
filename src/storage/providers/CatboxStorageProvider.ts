@@ -80,9 +80,14 @@ Content-Type: application/octet-stream
       }
 
       // Catbox files can be downloaded directly
-      const fileResponse = await fetch(url, {
-        headers: requestHeaders,
-      })
+      const headers = new Headers(requestHeaders)
+      if (!headers.has('User-Agent')) {
+        headers.set(
+          'User-Agent',
+          'jeremy46231/jer.app (https://jeremywoolley.com)'
+        )
+      }
+      const fileResponse = await fetch(url, { headers })
 
       if (!fileResponse.ok) {
         console.error(

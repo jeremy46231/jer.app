@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import { createLink } from '../../src/db'
 import { InlineStorageProvider } from '../../src/storage/providers/InlineStorageProvider'
-import type { InlineFileLinkWithContent } from '../../shared-types'
+import type { FileLinkWithContent } from '../../shared-types'
 import { createTestEnv, type TestEnv } from '../helpers/env'
 import { streamFromBuffer } from '../helpers/network'
 
@@ -16,9 +16,7 @@ afterEach(() => {
   env.__close()
 })
 
-async function loadInlineLink(
-  path: string
-): Promise<InlineFileLinkWithContent> {
+async function loadFileLink(path: string): Promise<FileLinkWithContent> {
   const row = (await env.DB.prepare(
     'SELECT path, type, file, content_type AS contentType, filename, download FROM links WHERE path = ?'
   )
@@ -34,29 +32,33 @@ async function loadInlineLink(
   if (!row) throw new Error(`No link at ${path}`)
   return {
     path: row.path,
-    type: 'inline_file',
+    type: 'file',
     contentType: row.contentType,
     filename: row.filename,
     download: !!row.download,
-    file: row.file ? new Uint8Array(row.file) : new Uint8Array(),
+    providerUrls: {},
+    locations: row.file ? ['inline'] : [],
+    file: row.file ? new Uint8Array(row.file) : undefined,
   }
 }
 
 describe('InlineStorageProvider.has', () => {
-  test('is true when an inline_file has a non-empty file', () => {
+  test('is true when a file link has a non-empty file', () => {
     expect(
       provider.has({
         path: 'p',
-        type: 'inline_file',
+        type: 'file',
         contentType: 'text/plain',
         filename: 'a.txt',
         download: false,
+        providerUrls: {},
+        locations: ['inline'],
         file: new Uint8Array([1]),
       })
     ).toBe(true)
   })
 
-  test('is false for a redirect or attachment', () => {
+  test('is false for a redirect', () => {
     expect(
       provider.has({
         path: 'p',
@@ -65,14 +67,18 @@ describe('InlineStorageProvider.has', () => {
         status: 302,
       })
     ).toBe(false)
+  })
+
+  test('is false for a file link with no inline bytes', () => {
     expect(
       provider.has({
         path: 'p',
-        type: 'attachment_file',
+        type: 'file',
         contentType: 'text/plain',
         filename: 'a.txt',
         download: false,
         providerUrls: { catbox: 'https://files.catbox.moe/x' },
+        locations: ['catbox'],
       })
     ).toBe(false)
   })
@@ -80,14 +86,14 @@ describe('InlineStorageProvider.has', () => {
 
 describe('InlineStorageProvider.upload', () => {
   test('reads the stream and writes the bytes back to the row', async () => {
-    // Pre-create the row so the UPDATE in upload has something to mutate.
     await createLink(env.DB, {
       path: 'note',
-      type: 'inline_file',
+      type: 'file',
       contentType: 'text/plain',
       filename: 'note.txt',
       download: false,
-      file: new Uint8Array(),
+      providerUrls: {},
+      locations: [],
     })
 
     const payload = new TextEncoder().encode('hello stream')
@@ -99,13 +105,13 @@ describe('InlineStorageProvider.upload', () => {
       env.DB
     )
 
-    const link = await loadInlineLink('note')
-    expect(new TextDecoder().decode(link.file)).toBe('hello stream')
+    const link = await loadFileLink('note')
+    expect(new TextDecoder().decode(link.file!)).toBe('hello stream')
   })
 })
 
 describe('InlineStorageProvider.download', () => {
-  test('returns null for non-inline links', async () => {
+  test('returns null for non-file links', async () => {
     const res = await provider.download(
       { path: 'p', type: 'redirect', url: 'https://x', status: 302 },
       new Headers()
@@ -113,15 +119,16 @@ describe('InlineStorageProvider.download', () => {
     expect(res).toBeNull()
   })
 
-  test('returns null for empty files', async () => {
+  test('returns null when file is absent or empty', async () => {
     const res = await provider.download(
       {
         path: 'p',
-        type: 'inline_file',
+        type: 'file',
         contentType: 'text/plain',
         filename: 'p.txt',
         download: false,
-        file: new Uint8Array(),
+        providerUrls: {},
+        locations: [],
       },
       new Headers()
     )
@@ -132,10 +139,12 @@ describe('InlineStorageProvider.download', () => {
     const res = await provider.download(
       {
         path: 'p',
-        type: 'inline_file',
+        type: 'file',
         contentType: 'text/plain',
         filename: 'p.txt',
         download: false,
+        providerUrls: {},
+        locations: ['inline'],
         file: new TextEncoder().encode('body'),
       },
       new Headers()
@@ -153,10 +162,12 @@ describe('InlineStorageProvider.download', () => {
     const res = await provider.download(
       {
         path: 'p',
-        type: 'inline_file',
+        type: 'file',
         contentType: 'text/plain',
         filename: 'p.txt',
         download: true,
+        providerUrls: {},
+        locations: ['inline'],
         file: new TextEncoder().encode('body'),
       },
       new Headers()

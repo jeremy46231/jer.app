@@ -58,24 +58,9 @@ export async function serveLink(
         )
       }
 
-      case 'inline_file': {
+      case 'file': {
         if (remainder !== '') return undefined
-        const disposition = link.download ? 'attachment' : 'inline'
-        return new Response(link.file, {
-          headers: {
-            'Content-Type': link.contentType,
-            'Content-Disposition': `${disposition}; filename="${link.filename}"`,
-          },
-        })
-      }
-
-      case 'attachment_file': {
-        if (remainder !== '') return undefined
-        const availableProviderIds = Object.keys(link.providerUrls ?? {})
-        console.log(
-          `Serving attachment_file ${currentPath}; providers in DB: [${availableProviderIds.join(', ') || '(none)'}]`
-        )
-        if (availableProviderIds.length === 0) {
+        if (link.locations.length === 0) {
           console.error(
             `No storage providers registered for path: ${currentPath}`
           )
@@ -84,6 +69,9 @@ export async function serveLink(
             { status: 502 }
           )
         }
+        console.log(
+          `Serving file ${currentPath}; locations: [${link.locations.join(', ') || '(none)'}]`
+        )
         const attempts: string[] = []
         for (const provider of downloadPriority) {
           if (!provider.has(link)) continue
@@ -114,7 +102,7 @@ export async function serveLink(
           }
         }
         console.error(
-          `All download attempts failed for path: ${currentPath}; tried: [${attempts.join(', ')}]; providers in DB: [${availableProviderIds.join(', ')}]`
+          `All download attempts failed for path: ${currentPath}; tried: [${attempts.join(', ')}]; locations: [${link.locations.join(', ')}]`
         )
         return new Response(
           'File temporarily unavailable - all storage providers failed',

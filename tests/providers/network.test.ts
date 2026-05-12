@@ -5,7 +5,7 @@ import { CatboxStorageProvider } from '../../src/storage/providers/CatboxStorage
 import { GofileStorageProvider } from '../../src/storage/providers/GofileStorageProvider'
 import { HcCdnStorageProvider } from '../../src/storage/providers/HcCdnStorageProvider'
 import { LitterboxStorageProvider } from '../../src/storage/providers/LitterboxStorageProvider'
-import type { AttachmentFileLink, LinkWithContent } from '../../shared-types'
+import type { FileLinkWithContent, LinkWithContent } from '../../shared-types'
 import { createTestEnv, type TestEnv } from '../helpers/env'
 import {
   networkEnabled,
@@ -88,11 +88,12 @@ for (const tc of cases) {
         const path = `test-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
         await createLink(env.DB, {
           path,
-          type: 'attachment_file',
+          type: 'file',
           contentType: 'application/octet-stream',
           filename: 'jer-app-test.txt',
           download: false,
           providerUrls: {},
+          locations: [],
         })
 
         await tc.provider.upload(
@@ -116,11 +117,12 @@ for (const tc of cases) {
         const path = `test-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
         await createLink(env.DB, {
           path,
-          type: 'attachment_file',
+          type: 'file',
           contentType: 'application/octet-stream',
           filename: 'jer-app-test.txt',
           download: false,
           providerUrls: {},
+          locations: [],
         })
 
         await tc.provider.upload(
@@ -134,12 +136,13 @@ for (const tc of cases) {
         const urls = await loadProviderUrls(path)
         const link: LinkWithContent = {
           path,
-          type: 'attachment_file',
+          type: 'file',
           contentType: 'application/octet-stream',
           filename: 'jer-app-test.txt',
           download: false,
           providerUrls: urls,
-        } satisfies AttachmentFileLink
+          locations: Object.keys(urls),
+        } satisfies FileLinkWithContent
 
         const res = await tc.provider.download(link, new Headers())
         expect(res).not.toBeNull()

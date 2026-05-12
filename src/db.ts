@@ -2,9 +2,8 @@ import type {
   Link,
   LinkWithContent,
   RedirectLink,
-  InlineFileLink,
-  InlineFileLinkWithContent,
-  AttachmentFileLink,
+  FileLink,
+  FileLinkWithContent,
 } from '../shared-types'
 
 type GenericLink = {
@@ -16,6 +15,7 @@ export async function getLinks(db: D1Database): Promise<Link[]> {
     .prepare(
       `
         SELECT l.path, l.type, l.redirect_url, l.redirect_status, l.content_type, l.filename, l.download,
+               CASE WHEN l.file IS NOT NULL AND length(l.file) > 0 THEN 1 ELSE 0 END AS has_inline,
                json_group_object(lp.provider_id, lp.url) FILTER (WHERE lp.provider_id IS NOT NULL) AS provider_urls
         FROM links l
         LEFT JOIN link_providers lp ON lp.path = l.path
@@ -32,6 +32,7 @@ export async function getLinks(db: D1Database): Promise<Link[]> {
     content_type?: string
     filename?: string
     download?: boolean
+    has_inline: number
     provider_urls: string | null
   }[]
 
@@ -49,28 +50,23 @@ export async function getLinks(db: D1Database): Promise<Link[]> {
           status: (row.redirect_status ?? 302) as RedirectLink['status'],
         } satisfies RedirectLink
 
-      case 'inline_file':
-        return {
-          ...generalAttributes,
-          type: 'inline_file',
-          contentType: row.content_type!,
-          filename: row.filename!,
-          download: row.download!,
-        } satisfies InlineFileLink
-
-      case 'attachment_file': {
+      case 'file': {
         const providerUrls: Record<string, string> = row.provider_urls
           ? JSON.parse(row.provider_urls)
           : {}
+        const externalKeys = Object.keys(providerUrls)
+        const locations = row.has_inline
+          ? ['inline', ...externalKeys]
+          : externalKeys
         return {
           ...generalAttributes,
-          type: 'attachment_file',
+          type: 'file',
           providerUrls,
-          locations: Object.keys(providerUrls),
+          locations,
           contentType: row.content_type!,
           filename: row.filename!,
           download: !!row.download,
-        } satisfies AttachmentFileLink
+        } satisfies FileLink
       }
 
       default:
@@ -87,6 +83,7 @@ export async function getLinkWithContent(
     .prepare(
       `
         SELECT l.path, l.type, l.redirect_url, l.redirect_status, l.file, l.content_type, l.filename, l.download,
+               CASE WHEN l.file IS NOT NULL AND length(l.file) > 0 THEN 1 ELSE 0 END AS has_inline,
                json_group_object(lp.provider_id, lp.url) FILTER (WHERE lp.provider_id IS NOT NULL) AS provider_urls
         FROM links l
         LEFT JOIN link_providers lp ON lp.path = l.path
@@ -108,6 +105,7 @@ export async function getLinkWithContent(
     content_type?: string
     filename?: string
     download?: boolean
+    has_inline: number
     provider_urls: string | null
   }
 
@@ -124,29 +122,26 @@ export async function getLinkWithContent(
         status: (row.redirect_status ?? 302) as RedirectLink['status'],
       } satisfies RedirectLink
 
-    case 'inline_file':
-      return {
-        ...generalAttributes,
-        type: 'inline_file',
-        contentType: row.content_type!,
-        filename: row.filename!,
-        file: row.file ? new Uint8Array(row.file) : new Uint8Array(),
-        download: row.download!,
-      } satisfies InlineFileLinkWithContent
-
-    case 'attachment_file': {
+    case 'file': {
       const providerUrls: Record<string, string> = row.provider_urls
         ? JSON.parse(row.provider_urls)
         : {}
+      const externalKeys = Object.keys(providerUrls)
+      const locations = row.has_inline
+        ? ['inline', ...externalKeys]
+        : externalKeys
+      const file =
+        row.has_inline && row.file ? new Uint8Array(row.file) : undefined
       return {
         ...generalAttributes,
-        type: 'attachment_file',
+        type: 'file',
         providerUrls,
-        locations: Object.keys(providerUrls),
+        locations,
         contentType: row.content_type!,
         filename: row.filename!,
         download: !!row.download,
-      } satisfies AttachmentFileLink
+        file,
+      } satisfies FileLinkWithContent
     }
 
     default:
@@ -164,6 +159,7 @@ export async function findLink(
     .prepare(
       `
         SELECT l.path, l.type, l.redirect_url, l.redirect_status, l.file, l.content_type, l.filename, l.download,
+               CASE WHEN l.file IS NOT NULL AND length(l.file) > 0 THEN 1 ELSE 0 END AS has_inline,
                json_group_object(lp.provider_id, lp.url) FILTER (WHERE lp.provider_id IS NOT NULL) AS provider_urls
         FROM links l
         LEFT JOIN link_providers lp ON lp.path = l.path
@@ -187,6 +183,7 @@ export async function findLink(
     content_type?: string
     filename?: string
     download?: boolean
+    has_inline: number
     provider_urls: string | null
   }
 
@@ -204,29 +201,26 @@ export async function findLink(
         status: (row.redirect_status ?? 302) as RedirectLink['status'],
       } satisfies RedirectLink
       break
-    case 'inline_file':
-      link = {
-        ...generalAttributes,
-        type: 'inline_file',
-        contentType: row.content_type!,
-        filename: row.filename!,
-        file: row.file ? new Uint8Array(row.file) : new Uint8Array(),
-        download: row.download!,
-      } satisfies InlineFileLinkWithContent
-      break
-    case 'attachment_file': {
+    case 'file': {
       const providerUrls: Record<string, string> = row.provider_urls
         ? JSON.parse(row.provider_urls)
         : {}
+      const externalKeys = Object.keys(providerUrls)
+      const locations = row.has_inline
+        ? ['inline', ...externalKeys]
+        : externalKeys
+      const file =
+        row.has_inline && row.file ? new Uint8Array(row.file) : undefined
       link = {
         ...generalAttributes,
-        type: 'attachment_file',
+        type: 'file',
         providerUrls,
-        locations: Object.keys(providerUrls),
+        locations,
         contentType: row.content_type!,
         filename: row.filename!,
         download: !!row.download,
-      } satisfies AttachmentFileLink
+        file,
+      } satisfies FileLinkWithContent
       break
     }
     default:
@@ -252,24 +246,7 @@ export async function createLink(
       )
       .bind(path, type, linkData.url, linkData.status ?? 302)
       .run()
-  } else if (type === 'inline_file') {
-    await db
-      .prepare(
-        `
-          INSERT INTO links (path, type, file, content_type, filename, download)
-          VALUES (?, ?, ?, ?, ?, ?)
-        `
-      )
-      .bind(
-        path,
-        type,
-        linkData.file,
-        linkData.contentType,
-        linkData.filename,
-        linkData.download
-      )
-      .run()
-  } else if (type === 'attachment_file') {
+  } else if (type === 'file') {
     await db
       .prepare(
         `

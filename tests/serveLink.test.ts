@@ -21,6 +21,12 @@ function get(path: string): CfRequest {
   ) as unknown as CfRequest
 }
 
+async function setFileBytes(path: string, data: Uint8Array): Promise<void> {
+  await env.DB.prepare('UPDATE links SET file = ? WHERE path = ?')
+    .bind(data, path)
+    .run()
+}
+
 describe('serveLink', () => {
   test('returns undefined when no link matches', async () => {
     const res = await serveLink(get('/missing'), env)
@@ -41,16 +47,18 @@ describe('serveLink', () => {
     expect(res!.headers.get('Location')).toBe('https://example.com/destination')
   })
 
-  test('inline file link serves bytes with the right headers', async () => {
+  test('file link with inline bytes serves them with the right headers', async () => {
     const data = new Uint8Array([1, 2, 3, 4, 5])
     await createLink(env.DB, {
       path: 'pic',
-      type: 'inline_file',
+      type: 'file',
       contentType: 'image/png',
       filename: 'cat.png',
       download: false,
-      file: data,
+      providerUrls: {},
+      locations: [],
     })
+    await setFileBytes('pic', data)
 
     const res = await serveLink(get('/pic'), env)
     expect(res).toBeDefined()
@@ -63,15 +71,17 @@ describe('serveLink', () => {
     expect(Array.from(body)).toEqual([1, 2, 3, 4, 5])
   })
 
-  test('inline file with download=true uses attachment disposition', async () => {
+  test('file link with download=true uses attachment disposition', async () => {
     await createLink(env.DB, {
       path: 'doc',
-      type: 'inline_file',
+      type: 'file',
       contentType: 'application/pdf',
       filename: 'doc.pdf',
       download: true,
-      file: new Uint8Array([0]),
+      providerUrls: {},
+      locations: [],
     })
+    await setFileBytes('doc', new Uint8Array([0]))
 
     const res = await serveLink(get('/doc'), env)
     expect(res!.headers.get('Content-Disposition')).toBe(
@@ -92,31 +102,30 @@ describe('serveLink', () => {
     expect(res!.headers.get('Location')).toBe('https://example.com/')
   })
 
-  test('attachment_file with no providers returns 502', async () => {
+  test('file link with no providers returns 502', async () => {
     await createLink(env.DB, {
       path: 'file',
-      type: 'attachment_file',
+      type: 'file',
       contentType: 'application/octet-stream',
       filename: 'a.bin',
       download: false,
       providerUrls: {},
+      locations: [],
     })
 
     const res = await serveLink(get('/file'), env)
     expect(res!.status).toBe(502)
   })
 
-  test('attachment_file falls through to 502 when no provider can serve it', async () => {
-    // Insert a provider row for an unknown id so getLinkWithContent doesn't
-    // hit the json_group_object empty-set bug, but still no real provider can
-    // satisfy the request.
+  test('file link falls through to 502 when no real provider can serve it', async () => {
     await createLink(env.DB, {
       path: 'file',
-      type: 'attachment_file',
+      type: 'file',
       contentType: 'application/octet-stream',
       filename: 'a.bin',
       download: false,
       providerUrls: {},
+      locations: [],
     })
     await env.DB.prepare(
       'INSERT INTO link_providers (path, provider_id, url) VALUES (?, ?, ?)'
@@ -188,12 +197,14 @@ describe('redirect routing', () => {
     })
     await createLink(env.DB, {
       path: 'real',
-      type: 'inline_file',
+      type: 'file',
       contentType: 'image/png',
       filename: 'img.png',
       download: false,
-      file: new Uint8Array([1, 2, 3]),
+      providerUrls: {},
+      locations: [],
     })
+    await setFileBytes('real', new Uint8Array([1, 2, 3]))
     const res = await serveLink(get('/alias'), env)
     expect(res!.status).toBe(200)
     expect(res!.headers.get('Content-Type')).toBe('image/png')
@@ -227,12 +238,14 @@ describe('redirect routing', () => {
   test('sub-path request does not match a file link via prefix', async () => {
     await createLink(env.DB, {
       path: 'img',
-      type: 'inline_file',
+      type: 'file',
       contentType: 'image/png',
       filename: 'img.png',
       download: false,
-      file: new Uint8Array([0]),
+      providerUrls: {},
+      locations: [],
     })
+    await setFileBytes('img', new Uint8Array([0]))
     const res = await serveLink(get('/img/something'), env)
     expect(res).toBeUndefined()
   })

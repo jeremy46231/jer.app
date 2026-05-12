@@ -4,26 +4,28 @@ import { GofileStorageProvider } from '../../src/storage/providers/GofileStorage
 describe('GofileStorageProvider', () => {
   const provider = new GofileStorageProvider()
 
-  test('has() is true only when an attachment_file has a stored gofile URL', () => {
+  test('has() is true only when a file link has a stored gofile URL', () => {
     expect(
       provider.has({
         path: 'p',
-        type: 'attachment_file',
+        type: 'file',
         contentType: 'application/octet-stream',
         filename: 'x',
         download: false,
         providerUrls: { gofile: 'https://gofile.io/d/abc' },
+        locations: ['gofile'],
       })
     ).toBe(true)
 
     expect(
       provider.has({
         path: 'p',
-        type: 'attachment_file',
+        type: 'file',
         contentType: 'application/octet-stream',
         filename: 'x',
         download: false,
         providerUrls: { catbox: 'https://files.catbox.moe/x' },
+        locations: ['catbox'],
       })
     ).toBe(false)
 
@@ -41,11 +43,12 @@ describe('GofileStorageProvider', () => {
     const res = await provider.download(
       {
         path: 'p',
-        type: 'attachment_file',
+        type: 'file',
         contentType: 'application/octet-stream',
         filename: 'x',
         download: false,
         providerUrls: {},
+        locations: [],
       },
       new Headers()
     )
@@ -57,11 +60,12 @@ describe('GofileStorageProvider', () => {
     const res = await provider.download(
       {
         path: 'p',
-        type: 'attachment_file',
+        type: 'file',
         contentType: 'application/octet-stream',
         filename: 'x',
         download: false,
         providerUrls: { gofile: url },
+        locations: ['gofile'],
       },
       new Headers()
     )

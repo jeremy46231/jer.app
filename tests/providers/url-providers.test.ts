@@ -30,11 +30,12 @@ for (const { name, provider } of providers) {
       expect(
         provider.has({
           path: 'p',
-          type: 'attachment_file',
+          type: 'file',
           contentType: 'application/octet-stream',
           filename: 'x',
           download: false,
           providerUrls: { [provider.id]: 'https://example.com/file' },
+          locations: [provider.id],
         })
       ).toBe(true)
     })
@@ -43,16 +44,17 @@ for (const { name, provider } of providers) {
       expect(
         provider.has({
           path: 'p',
-          type: 'attachment_file',
+          type: 'file',
           contentType: 'application/octet-stream',
           filename: 'x',
           download: false,
           providerUrls: {},
+          locations: [],
         })
       ).toBe(false)
     })
 
-    test('has() is false for non-attachment links', () => {
+    test('has() is false for non-file links', () => {
       expect(
         provider.has({
           path: 'p',
@@ -67,11 +69,12 @@ for (const { name, provider } of providers) {
       const res = await provider.download(
         {
           path: 'p',
-          type: 'attachment_file',
+          type: 'file',
           contentType: 'application/octet-stream',
           filename: 'x',
           download: false,
           providerUrls: {},
+          locations: [],
         },
         new Headers()
       )

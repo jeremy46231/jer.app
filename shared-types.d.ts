@@ -18,30 +18,19 @@ export type RedirectLink = GenericLink & {
   status: 301 | 302 | 307 | 308
 }
 
-type FileLink = GenericLink & {
+export type FileLink = GenericLink & {
+  type: 'file'
   contentType: string
   filename: string
   download: boolean
-}
-
-export type InlineFileLink = FileLink & {
-  type: 'inline_file'
-}
-
-export type AttachmentFileLink = FileLink & {
-  type: 'attachment_file'
   providerUrls: Record<string, string>
-  locations?: string[]
+  locations: string[]
 }
 
-export type Link = RedirectLink | InlineFileLink | AttachmentFileLink
+export type Link = RedirectLink | FileLink
 
-// Full link types with file content - used only when storing/retrieving complete file data
-export type InlineFileLinkWithContent = InlineFileLink & {
-  file: Uint8Array
+export type FileLinkWithContent = FileLink & {
+  file?: Uint8Array
 }
 
-export type LinkWithContent =
-  | RedirectLink
-  | InlineFileLinkWithContent
-  | AttachmentFileLink
+export type LinkWithContent = RedirectLink | FileLinkWithContent

@@ -10,8 +10,8 @@ import { providerMap, downloadPriority } from './storage/providers'
 import type {
   Link,
   RedirectLink,
-  AttachmentFileLink,
-  InlineFileLinkWithContent,
+  FileLink,
+  FileLinkWithContent,
 } from '../shared-types'
 
 type GenericLinkCreationData = {
@@ -102,26 +102,15 @@ export async function handleAPI(
       return new Response('File is required', { status: 400 })
     }
 
-    const isInlineOnly = locations.length === 1 && locations[0] === 'inline'
-    if (isInlineOnly) {
-      await createLink(env.DB, {
-        path,
-        type: 'inline_file',
-        contentType,
-        filename,
-        download,
-        file: new Uint8Array(),
-      })
-    } else {
-      await createLink(env.DB, {
-        path,
-        type: 'attachment_file',
-        contentType,
-        filename,
-        download,
-        providerUrls: {},
-      })
-    }
+    await createLink(env.DB, {
+      path,
+      type: 'file',
+      contentType,
+      filename,
+      download,
+      providerUrls: {},
+      locations: [],
+    })
 
     // Clone the request body stream for each provider
     const streams: ReadableStream<Uint8Array>[] = []
@@ -215,7 +204,7 @@ export async function handleAPI(
     const full = await getLinkWithContent(env.DB, linkPath)
     if (!full) return new Response('Not Found', { status: 404 })
     let serializable: Link
-    if (full.type === 'inline_file') {
+    if (full.type === 'file') {
       const { file: _, ...rest } = full
       serializable = rest
     } else {
@@ -260,7 +249,7 @@ export async function handleAPI(
         url: data.url,
         status: (data.status ?? 302) as RedirectLink['status'],
       }
-    } else if (type === 'inline_file' || type === 'attachment_file') {
+    } else if (type === 'file') {
       if (!data.contentType || !data.filename) {
         return new Response('contentType and filename required', {
           status: 400,
@@ -268,9 +257,9 @@ export async function handleAPI(
       }
 
       const currentLocations =
-        currentLink.type === 'attachment_file'
-          ? ((currentLink as AttachmentFileLink).locations ?? [])
-          : ['inline']
+        currentLink.type === 'file'
+          ? ((currentLink as FileLink).locations ?? [])
+          : []
       const newLocations = data.locations ?? currentLocations
 
       // Validate: at least one provider must remain
@@ -292,25 +281,38 @@ export async function handleAPI(
           .run()
       }
 
+      // Remove inline bytes if inline was deselected
+      if (
+        currentLocations.includes('inline') &&
+        !newLocations.includes('inline')
+      ) {
+        await env.DB.prepare('UPDATE links SET file = NULL WHERE path = ?')
+          .bind(oldPath)
+          .run()
+      }
+
       // Add new providers by re-uploading existing file content
-      const added = newLocations.filter(
-        (l) => l !== 'inline' && !currentLocations.includes(l)
-      )
+      const added = newLocations.filter((l) => !currentLocations.includes(l))
       if (added.length > 0) {
-        // Get existing file bytes
         let fileBytes: Uint8Array | null = null
-        if (currentLink.type === 'inline_file') {
-          fileBytes = (currentLink as InlineFileLinkWithContent).file ?? null
-        } else if (currentLink.type === 'attachment_file') {
-          for (const provider of downloadPriority) {
-            if (provider.has(currentLink)) {
-              try {
-                const resp = await provider.download(currentLink, new Headers())
-                if (resp) {
-                  fileBytes = new Uint8Array(await resp.arrayBuffer())
-                  break
-                }
-              } catch {}
+        if (currentLink.type === 'file') {
+          const fileLink = currentLink as FileLinkWithContent
+          if (fileLink.file?.length) {
+            fileBytes = fileLink.file
+          } else {
+            for (const provider of downloadPriority) {
+              if (provider.has(currentLink)) {
+                try {
+                  const resp = await provider.download(
+                    currentLink,
+                    new Headers()
+                  )
+                  if (resp) {
+                    fileBytes = new Uint8Array(await resp.arrayBuffer())
+                    break
+                  }
+                } catch {}
+              }
             }
           }
         }
@@ -342,29 +344,15 @@ export async function handleAPI(
         }
       }
 
-      // If external providers were added to an inline_file, promote it to
-      // attachment_file so the table (and getLinks) surfaces those providers.
-      const finalType =
-        type === 'inline_file' && added.length > 0 ? 'attachment_file' : type
-
-      linkData =
-        finalType === 'inline_file'
-          ? {
-              path: newPath,
-              type: 'inline_file',
-              contentType: data.contentType,
-              filename: data.filename,
-              download: !!data.download,
-            }
-          : {
-              path: newPath,
-              type: 'attachment_file',
-              contentType: data.contentType,
-              filename: data.filename,
-              download: !!data.download,
-              providerUrls: {},
-              locations: [],
-            }
+      linkData = {
+        path: newPath,
+        type: 'file',
+        contentType: data.contentType,
+        filename: data.filename,
+        download: !!data.download,
+        providerUrls: {},
+        locations: [],
+      }
     } else {
       return new Response('Unsupported link type', { status: 400 })
     }
@@ -409,8 +397,6 @@ export async function handleAPI(
 
     const currentLink = await getLinkWithContent(env.DB, oldPath)
     if (!currentLink) return new Response('Link not found', { status: 404 })
-
-    const isInlineOnly = locations.length === 1 && locations[0] === 'inline'
 
     // Upload to providers first (using oldPath) before touching any DB state.
     // This way, if all uploads fail, nothing has changed.
@@ -462,9 +448,8 @@ export async function handleAPI(
 
     // At least one upload succeeded — now remove deselected providers and
     // update metadata / rename. Both use oldPath before the rename runs.
-    if (currentLink.type === 'attachment_file') {
-      const currentLocations =
-        (currentLink as AttachmentFileLink).locations ?? []
+    if (currentLink.type === 'file') {
+      const currentLocations = (currentLink as FileLink).locations ?? []
       const removed = currentLocations.filter(
         (l) => !locations.includes(l) && l !== 'inline'
       )
@@ -475,19 +460,26 @@ export async function handleAPI(
           .bind(oldPath, providerId)
           .run()
       }
+      // Clear inline bytes if 'inline' was removed
+      if (
+        currentLocations.includes('inline') &&
+        !locations.includes('inline')
+      ) {
+        await env.DB.prepare('UPDATE links SET file = NULL WHERE path = ?')
+          .bind(oldPath)
+          .run()
+      }
     }
 
-    const linkData: Link = isInlineOnly
-      ? { path: newPath, type: 'inline_file', contentType, filename, download }
-      : {
-          path: newPath,
-          type: 'attachment_file',
-          contentType,
-          filename,
-          download,
-          providerUrls: {},
-          locations: [],
-        }
+    const linkData: Link = {
+      path: newPath,
+      type: 'file',
+      contentType,
+      filename,
+      download,
+      providerUrls: {},
+      locations: [],
+    }
 
     await updateLink(env.DB, oldPath, linkData)
 

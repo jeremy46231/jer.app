@@ -1,4 +1,4 @@
-import type { LinkWithContent, AttachmentFileLink } from '../../shared-types'
+import type { LinkWithContent, FileLink } from '../../shared-types'
 
 export abstract class AbstractStorageProvider {
   /** A unique identifier for the provider (e.g., 'gofile', 'inline'). */
@@ -41,7 +41,7 @@ export abstract class AbstractStorageProvider {
   ): Promise<Response | null>
 
   getUrl(link: LinkWithContent): string | undefined {
-    if (link.type !== 'attachment_file') return undefined
-    return (link as AttachmentFileLink).providerUrls[this.id]
+    if (link.type !== 'file') return undefined
+    return (link as FileLink).providerUrls[this.id]
   }
 }

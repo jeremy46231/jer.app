@@ -82,17 +82,11 @@ function openDialog(linkData) {
         any(linkData).status ?? 302
       )
       urlInput.dispatchEvent(new Event('input'))
-    } else if (
-      linkData.type === 'inline_file' ||
-      linkData.type === 'attachment_file'
-    ) {
+    } else if (linkData.type === 'file') {
       typeSelect.value = 'file'
       handleTypeChange()
 
-      const currentLocations =
-        linkData.type === 'inline_file'
-          ? ['inline']
-          : (any(linkData).locations ?? [])
+      const currentLocations = any(linkData).locations ?? []
 
       setLocationCheckboxesForEdit(currentLocations, linkData.type)
       locationsHelp.textContent =
@@ -128,15 +122,13 @@ function closeDialog() {
 
 /**
  * Pre-check location checkboxes for edit mode.
- * 'inline' is always checked+disabled for inline_file links (implicit storage).
- * All other checkboxes are enabled so providers can be freely added or removed.
  * @param {string[]} currentLocations
  * @param {string} storedType
  */
 function setLocationCheckboxesForEdit(currentLocations, storedType) {
   locationCheckboxes.forEach((cb) => {
     cb.checked = currentLocations.includes(cb.value)
-    cb.disabled = cb.value === 'inline' && storedType === 'inline_file'
+    cb.disabled = false
   })
 }
 
@@ -508,8 +500,7 @@ async function submitEdit() {
         if (!contentType) contentType = 'application/octet-stream'
         if (!filename) filename = newPath
 
-        const storedType =
-          editingLinkType === 'inline_file' ? 'inline_file' : 'attachment_file'
+        const storedType = 'file'
 
         const response = await fetch('/api/links', {
           method: 'PUT',
@@ -673,25 +664,8 @@ async function renderLinks() {
             `
           )
           break
-        case 'inline_file': {
-          const inlineDownloadText = link.download ? ' (force download)' : ''
-          row.insertAdjacentHTML(
-            'beforeend',
-            html`
-              <td>
-                <a href=${linkURL} target="_blank">
-                  <code>${link.filename}</code>
-                </a>
-                ${' '}(${link.contentType})${inlineDownloadText}
-              </td>
-            `
-          )
-          break
-        }
-        case 'attachment_file': {
-          const attachmentDownloadText = link.download
-            ? ' (force download)'
-            : ''
+        case 'file': {
+          const downloadText = link.download ? ' (force download)' : ''
           const locationsText =
             link.locations && link.locations.length > 0
               ? ` [Available: ${link.locations.join(', ')}]`
@@ -703,7 +677,7 @@ async function renderLinks() {
                 <a href=${linkURL} target="_blank">
                   <code>${link.filename}</code>
                 </a>
-                ${' '}(${link.contentType})${attachmentDownloadText}${locationsText}
+                ${' '}(${link.contentType})${downloadText}${locationsText}
               </td>
             `
           )
