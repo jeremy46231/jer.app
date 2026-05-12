@@ -1,14 +1,25 @@
 import { AbstractStorageProvider } from '../AbstractStorageProvider'
-import type { LinkWithContent } from '../../../shared-types'
-import { Base64EncodeStream } from '../../base64EncodeStream'
+import type { FileLink, LinkWithContent } from '../../../shared-types'
 import { CombineStream } from '../../combineStream'
 
 export class HcCdnStorageProvider extends AbstractStorageProvider {
   readonly id = 'hc-cdn'
   readonly name = 'Hack Club CDN'
 
+  constructor(private readonly apiKey: string) {
+    super()
+  }
+
   has(link: LinkWithContent): boolean {
     return !!this.getUrl(link)
+  }
+
+  // Stored value is either a plain URL (old entries) or "{id}|{url}" (new entries).
+  override getUrl(link: LinkWithContent): string | undefined {
+    const stored = super.getUrl(link)
+    if (!stored) return undefined
+    const pipe = stored.indexOf('|')
+    return pipe === -1 ? stored : stored.slice(pipe + 1)
   }
 
   async upload(
@@ -18,66 +29,59 @@ export class HcCdnStorageProvider extends AbstractStorageProvider {
     linkPath: string,
     db: D1Database
   ): Promise<void> {
+    const boundary = '-'.repeat(20) + Math.random().toFixed(20).slice(2)
+    const prefix =
+      `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${filename}"\r\nContent-Type: application/octet-stream\r\n\r\n`.replaceAll(
+        /\r?\n/g,
+        '\r\n'
+      )
+    const suffix = `\r\n--${boundary}--\r\n`
+
+    const body = CombineStream([prefix, { stream: file, length }, suffix])
+
+    const response = await fetch('https://cdn.hackclub.com/api/v4/upload', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.apiKey}`,
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body,
+    })
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => '')
+      throw new Error(
+        `Hack Club CDN upload failed (${response.status}): ${text}`
+      )
+    }
+
+    const data = (await response.json()) as { id: string; url: string }
+    if (!data.id || !data.url) {
+      throw new Error('Hack Club CDN upload: missing id or url in response')
+    }
+
+    await db
+      .prepare(
+        'INSERT INTO link_providers (path, provider_id, url) VALUES (?, ?, ?) ON CONFLICT (path, provider_id) DO UPDATE SET url = excluded.url'
+      )
+      .bind(linkPath, this.id, `${data.id}|${data.url}`)
+      .run()
+  }
+
+  async delete(link: LinkWithContent): Promise<void> {
+    if (link.type !== 'file') return
+    const stored = (link as FileLink).providerUrls[this.id]
+    if (!stored) return
+    const pipe = stored.indexOf('|')
+    if (pipe === -1) return // old plain-URL entry, no ID available
+    const id = stored.slice(0, pipe)
     try {
-      const prefix = '["data:application/octet-stream;base64,'
-      const base64Stream = file.pipeThrough(new Base64EncodeStream())
-      const suffix = `"]`
-
-      const combinedStream = CombineStream([
-        prefix,
-        { stream: base64Stream, length: length },
-        suffix,
-      ])
-
-      const response = await fetch('https://cdn.hackclub.com/api/v3/new', {
-        method: 'POST',
-        headers: {
-          'Authorization': 'Bearer beans', // yep, that's the token
-          'Content-Type': 'application/json',
-          'User-Agent': 'jeremy46231/jer.app (https://jeremywoolley.com)',
-        },
-        body: combinedStream,
+      await fetch(`https://cdn.hackclub.com/api/v4/upload/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${this.apiKey}` },
       })
-
-      if (!response.ok) {
-        try {
-          const text = await response.text()
-          throw new Error(
-            `Failed to upload file: ${response.status} ${response.statusText} - ${text}`
-          )
-        } catch {
-          throw new Error(
-            `Failed to upload file: ${response.status} ${response.statusText}`
-          )
-        }
-      }
-
-      const data = (await response.json()) as {
-        files: {
-          deployedUrl: string
-          file: string
-          sha: string
-          size: number
-        }[]
-        cdnBase: string
-      }
-
-      const deployedUrl = data.files[0].deployedUrl
-      if (!deployedUrl) {
-        throw new Error(
-          'Invalid response from Hack Club CDN: missing deployedUrl'
-        )
-      }
-
-      await db
-        .prepare(
-          'INSERT INTO link_providers (path, provider_id, url) VALUES (?, ?, ?) ON CONFLICT (path, provider_id) DO UPDATE SET url = excluded.url'
-        )
-        .bind(linkPath, this.id, deployedUrl)
-        .run()
     } catch (error) {
-      console.error('Hack Club CDN upload failed:', error)
-      throw error
+      console.error(`Hack Club CDN delete failed for id ${id}:`, error)
     }
   }
 
@@ -85,28 +89,15 @@ export class HcCdnStorageProvider extends AbstractStorageProvider {
     link: LinkWithContent,
     requestHeaders: Headers
   ): Promise<Response | null> {
-    try {
-      const url = this.getUrl(link)
-      if (!url) {
-        return null
-      }
-
-      // HC CDN files can be downloaded directly
-      const fileResponse = await fetch(url, {
-        headers: requestHeaders,
-      })
-
-      if (!fileResponse.ok) {
-        console.error(
-          `Failed to download from Hack Club CDN: ${fileResponse.statusText}`
-        )
-        return null
-      }
-
-      return fileResponse
-    } catch (error) {
-      console.error('Hack Club CDN download failed:', error)
+    const url = this.getUrl(link)
+    if (!url) return null
+    const response = await fetch(url, { headers: requestHeaders })
+    if (!response.ok) {
+      console.error(
+        `Hack Club CDN download failed (${response.status}): ${url}`
+      )
       return null
     }
+    return response
   }
 }

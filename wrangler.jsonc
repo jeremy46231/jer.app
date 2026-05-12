@@ -17,6 +17,7 @@
   },
   "vars": {
     "COPYPARTY_BACKENDS": "",
+    "HC_CDN_KEY": "",
   },
   "d1_databases": [
     {

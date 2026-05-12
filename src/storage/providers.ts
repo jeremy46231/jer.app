@@ -13,7 +13,6 @@ const inline = new InlineStorageProvider()
 const catbox = new CatboxStorageProvider()
 const litterbox = new LitterboxStorageProvider()
 const gofile = new GofileStorageProvider()
-const hcCdn = new HcCdnStorageProvider()
 
 function parseCopypartyBackends(
   json: string | undefined
@@ -34,10 +33,12 @@ export function getProviders(env: Env): {
   allProviders: readonly AbstractStorageProvider[]
 } {
   const copyparty = parseCopypartyBackends(env.COPYPARTY_BACKENDS)
+  const hcCdn = new HcCdnStorageProvider(env.HC_CDN_KEY ?? '')
 
   const providerMap = new Map<string, AbstractStorageProvider>([
     [inline.id, inline],
     ...copyparty.map((p) => [p.id, p] as [string, AbstractStorageProvider]),
+    [hcCdn.id, hcCdn],
     [catbox.id, catbox],
     [litterbox.id, litterbox],
     [gofile.id, gofile],

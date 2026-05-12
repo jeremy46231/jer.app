@@ -65,10 +65,13 @@ export class CopypartyStorageProvider extends AbstractStorageProvider {
     if (!url) return
     const auth = btoa(`${this.config.username}:${this.config.password}`)
     try {
-      await fetch(url, {
+      const response = await fetch(url, {
         method: 'DELETE',
         headers: { Authorization: `Basic ${auth}` },
       })
+      if (!response.ok) {
+        console.error(`Copyparty delete failed (${response.status}): ${url}`)
+      }
     } catch (error) {
       console.error(`Copyparty delete failed for ${url}:`, error)
     }

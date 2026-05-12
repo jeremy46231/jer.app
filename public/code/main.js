@@ -138,26 +138,25 @@ function resetLocationCheckboxes() {
   })
 }
 
-/** Fallback order when /api/providers is unavailable. */
-const FALLBACK_PROVIDERS = [
-  { id: 'hc-cdn', name: 'Hack Club CDN (70kb, forever)' },
-  { id: 'catbox', name: 'Catbox (200mb, forever)' },
-  { id: 'litterbox', name: 'Litterbox (1gb, 72h)' },
-  { id: 'gofile', name: 'Gofile (unlimited, temporary, slow)' },
-]
-
 async function loadProviders() {
   const container = getElementById('dynamic-locations')
-  const makeCheckbox = (/** @type {{ id: string; name: string }} */ p) =>
-    `<label class="checkbox-label"><input type="checkbox" name="locations" value="${p.id}" /><span>${p.name}</span></label>`
   try {
     const res = await fetch('/api/providers')
     if (!res.ok) throw new Error('failed')
     /** @type {{ id: string; name: string }[]} */
     const providers = await res.json()
-    container.innerHTML = providers.map(makeCheckbox).join('')
+    container.innerHTML = providers
+      .map(
+        (p) =>
+          html`<label class="checkbox-label"
+            ><input type="checkbox" name="locations" value="${p.id}" /><span
+              >${p.name}</span
+            ></label
+          >`
+      )
+      .join('')
   } catch {
-    container.innerHTML = FALLBACK_PROVIDERS.map(makeCheckbox).join('')
+    container.innerHTML = ''
   }
   locationCheckboxes = document.querySelectorAll('input[name="locations"]')
 }

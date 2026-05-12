@@ -8,7 +8,7 @@ const { providerMap, downloadPriority, allProviders } = getProviders(env)
 describe('storage provider registry', () => {
   test('exposes the expected upload providers in providerMap', () => {
     expect([...providerMap.keys()].sort()).toEqual(
-      ['catbox', 'gofile', 'inline', 'litterbox'].sort()
+      ['catbox', 'gofile', 'hc-cdn', 'inline', 'litterbox'].sort()
     )
   })
 

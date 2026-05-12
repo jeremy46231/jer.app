@@ -45,11 +45,6 @@ export async function handleAPI(
     const list = Array.from(providerMap.values())
       .filter((p) => p.id !== 'inline')
       .map((p) => ({ id: p.id, name: p.name }))
-    const catboxIdx = list.findIndex((p) => p.id === 'catbox')
-    list.splice(catboxIdx === -1 ? list.length : catboxIdx, 0, {
-      id: 'hc-cdn',
-      name: 'Hack Club CDN (70kb, forever)',
-    })
     return new Response(JSON.stringify(list), {
       headers: { 'Content-Type': 'application/json' },
     })
@@ -206,6 +201,16 @@ export async function handleAPI(
 
     if (!pathToDelete) {
       return new Response('Path parameter is required', { status: 400 })
+    }
+
+    const linkToDelete = await getLinkWithContent(env.DB, pathToDelete)
+    if (linkToDelete?.type === 'file') {
+      await Promise.allSettled(
+        linkToDelete.locations
+          .filter((id) => id !== 'inline')
+          .map((id) => providerMap.get(id)?.delete(linkToDelete))
+          .filter(Boolean)
+      )
     }
 
     await deleteLink(env.DB, pathToDelete)
