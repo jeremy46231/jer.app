@@ -71,32 +71,51 @@ export async function serveLink(
 
       case 'attachment_file': {
         if (remainder !== '') return undefined
+        const availableProviderIds = Object.keys(link.providerUrls ?? {})
+        console.log(
+          `Serving attachment_file ${currentPath}; providers in DB: [${availableProviderIds.join(', ') || '(none)'}]`
+        )
+        if (availableProviderIds.length === 0) {
+          console.error(
+            `No storage providers registered for path: ${currentPath}`
+          )
+          return new Response(
+            'File unavailable - no storage providers registered for this link',
+            { status: 502 }
+          )
+        }
+        const attempts: string[] = []
         for (const provider of downloadPriority) {
-          if (provider.has(link)) {
-            try {
-              console.log(
-                `Attempting download from ${provider.name} (${provider.id})`
+          if (!provider.has(link)) continue
+          attempts.push(provider.id)
+          try {
+            console.log(
+              `Attempting download from ${provider.name} (${provider.id}) url=${provider.getUrl(link) ?? '(inline)'}`
+            )
+            const response = await provider.download(link, request.headers)
+            if (response) {
+              const disposition = link.download ? 'attachment' : 'inline'
+              const responseHeaders = new Headers(response.headers)
+              responseHeaders.set('Content-Type', link.contentType)
+              responseHeaders.set(
+                'Content-Disposition',
+                `${disposition}; filename="${link.filename}"`
               )
-              const response = await provider.download(link, request.headers)
-              if (response) {
-                const disposition = link.download ? 'attachment' : 'inline'
-                const responseHeaders = new Headers(response.headers)
-                responseHeaders.set('Content-Type', link.contentType)
-                responseHeaders.set(
-                  'Content-Disposition',
-                  `${disposition}; filename="${link.filename}"`
-                )
-                return new Response(response.body, {
-                  status: response.status,
-                  headers: responseHeaders,
-                })
-              }
-            } catch (error) {
-              console.error(`Error downloading from ${provider.name}:`, error)
+              return new Response(response.body, {
+                status: response.status,
+                headers: responseHeaders,
+              })
             }
+            console.error(
+              `Provider ${provider.name} (${provider.id}) returned null for ${currentPath}`
+            )
+          } catch (error) {
+            console.error(`Error downloading from ${provider.name}:`, error)
           }
         }
-        console.error(`All download attempts failed for path: ${currentPath}`)
+        console.error(
+          `All download attempts failed for path: ${currentPath}; tried: [${attempts.join(', ')}]; providers in DB: [${availableProviderIds.join(', ')}]`
+        )
         return new Response(
           'File temporarily unavailable - all storage providers failed',
           { status: 502 }

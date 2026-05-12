@@ -40,7 +40,7 @@ export abstract class AbstractStorageProvider {
     requestHeaders: Headers
   ): Promise<Response | null>
 
-  protected getUrl(link: LinkWithContent): string | undefined {
+  getUrl(link: LinkWithContent): string | undefined {
     if (link.type !== 'attachment_file') return undefined
     return (link as AttachmentFileLink).providerUrls[this.id]
   }
