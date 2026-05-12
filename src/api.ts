@@ -6,7 +6,7 @@ import {
   getLinkWithContent,
   updateLink,
 } from './db'
-import { providerMap, downloadPriority } from './storage/providers'
+import { getProviders } from './storage/providers'
 import type {
   Link,
   RedirectLink,
@@ -38,6 +38,22 @@ export async function handleAPI(
   }
 
   const url = new URL(request.url)
+  const { providerMap, downloadPriority } = getProviders(env)
+
+  // GET /api/providers - list available upload providers
+  if (url.pathname === '/api/providers' && request.method === 'GET') {
+    const list = Array.from(providerMap.values())
+      .filter((p) => p.id !== 'inline')
+      .map((p) => ({ id: p.id, name: p.name }))
+    const catboxIdx = list.findIndex((p) => p.id === 'catbox')
+    list.splice(catboxIdx === -1 ? list.length : catboxIdx, 0, {
+      id: 'hc-cdn',
+      name: 'Hack Club CDN (70kb, forever)',
+    })
+    return new Response(JSON.stringify(list), {
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
 
   // GET /api/links - list all links
   if (url.pathname === '/api/links' && request.method === 'GET') {
@@ -274,6 +290,8 @@ export async function handleAPI(
         (l) => l !== 'inline' && !newLocations.includes(l)
       )
       for (const providerId of removed) {
+        const provider = providerMap.get(providerId)
+        if (provider) await provider.delete(currentLink)
         await env.DB.prepare(
           'DELETE FROM link_providers WHERE path = ? AND provider_id = ?'
         )

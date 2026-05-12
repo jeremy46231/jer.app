@@ -15,6 +15,9 @@
       "invocation_logs": true,
     },
   },
+  "vars": {
+    "COPYPARTY_BACKENDS": "",
+  },
   "d1_databases": [
     {
       "binding": "DB",

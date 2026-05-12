@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'bun:test'
-import {
-  allProviders,
-  downloadPriority,
-  providerMap,
-} from '../../src/storage/providers'
+import { getProviders } from '../../src/storage/providers'
+import { createTestEnv } from '../helpers/env'
+
+const env = createTestEnv()
+const { providerMap, downloadPriority, allProviders } = getProviders(env)
 
 describe('storage provider registry', () => {
   test('exposes the expected upload providers in providerMap', () => {
@@ -23,7 +23,6 @@ describe('storage provider registry', () => {
     expect(downloadPriority[0]!.id).toBe('inline')
     const ids = downloadPriority.map((p) => p.id)
     expect(ids).toContain('hc-cdn')
-    // hc-cdn must precede the public boxes (we want stable URLs first).
     expect(ids.indexOf('hc-cdn')).toBeLessThan(ids.indexOf('catbox'))
   })
 
@@ -32,5 +31,26 @@ describe('storage provider registry', () => {
     for (const id of providerMap.keys()) {
       expect(downloadIds.has(id)).toBe(true)
     }
+  })
+
+  test('copyparty providers appear in providerMap and downloadPriority when COPYPARTY_BACKENDS is set', () => {
+    const envWithCopyparty = {
+      ...env,
+      COPYPARTY_BACKENDS: JSON.stringify([
+        {
+          id: 'vps',
+          name: 'VPS',
+          baseUrl: 'https://files.jer.app/files/jer.app/',
+          username: 'jer-app',
+          password: 'testpass',
+        },
+      ]),
+    }
+    const { providerMap: pm, downloadPriority: dp } =
+      getProviders(envWithCopyparty)
+    expect(pm.has('vps')).toBe(true)
+    const ids = dp.map((p) => p.id)
+    expect(ids.indexOf('vps')).toBeLessThan(ids.indexOf('catbox'))
+    expect(ids.indexOf('vps')).toBeGreaterThan(ids.indexOf('inline'))
   })
 })

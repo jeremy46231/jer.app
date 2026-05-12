@@ -1,5 +1,5 @@
 import { findLink } from './db'
-import { downloadPriority } from './storage/providers'
+import { getProviders } from './storage/providers'
 
 const MAX_REWRITES = 10
 
@@ -60,6 +60,7 @@ export async function serveLink(
 
       case 'file': {
         if (remainder !== '') return undefined
+        const { downloadPriority } = getProviders(env)
         if (link.locations.length === 0) {
           console.error(
             `No storage providers registered for path: ${currentPath}`

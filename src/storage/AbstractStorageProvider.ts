@@ -40,6 +40,12 @@ export abstract class AbstractStorageProvider {
     requestHeaders: Headers
   ): Promise<Response | null>
 
+  /**
+   * Deletes the remote file for the given link. No-op by default.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async delete(_link: LinkWithContent): Promise<void> {}
+
   getUrl(link: LinkWithContent): string | undefined {
     if (link.type !== 'file') return undefined
     return (link as FileLink).providerUrls[this.id]

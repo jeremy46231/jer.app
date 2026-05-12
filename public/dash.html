@@ -84,42 +84,22 @@
             <label>Storage Locations:</label>
             <div class="checkbox-group">
               <label class="checkbox-label">
-                <input
-                  type="checkbox"
-                  name="locations"
-                  value="inline"
-                  checked
-                />
+                <input type="checkbox" name="locations" value="inline" />
                 <span>Inline in DB (5gb total, fast)</span>
               </label>
-              <label class="checkbox-label">
-                <input type="checkbox" name="locations" value="hc-cdn" />
-                <span>Hack Club CDN (70kb, forever)</span>
-              </label>
-              <label class="checkbox-label">
-                <input type="checkbox" name="locations" value="catbox" />
-                <span>Catbox (200mb, forever)</span>
-              </label>
-              <label class="checkbox-label">
-                <input type="checkbox" name="locations" value="litterbox" />
-                <span>Litterbox (1gb, 72h)</span>
-              </label>
-              <label class="checkbox-label">
-                <input type="checkbox" name="locations" value="gofile" />
-                <span>Gofile (unlimited, temporary, slow)</span>
-              </label>
             </div>
-            <small id="locations-help"
-              >Select one or more storage locations. Files will be uploaded to
-              all selected providers for redundancy.</small
-            >
+            <div class="checkbox-group" id="dynamic-locations"></div>
+            <small id="locations-help">
+              Select one or more storage locations. Files will be uploaded to
+              all selected providers for redundancy.
+            </small>
           </div>
           <div class="form-group">
             <label for="filename">Filename (optional):</label>
             <input type="text" id="filename" name="filename" />
-            <small id="filename-help"
-              >Leave empty to use the original filename</small
-            >
+            <small id="filename-help">
+              Leave empty to use the original filename
+            </small>
           </div>
           <div class="form-group">
             <label for="content-type">Content-type (optional):</label>
@@ -130,10 +110,10 @@
               list="content-types"
               placeholder="text/plain"
             />
-            <small id="content-type-help"
-              >Defaults to text/plain for text content, browser-provided for
-              files</small
-            >
+            <small id="content-type-help">
+              Defaults to text/plain for text content, browser-provided for
+              files
+            </small>
             <datalist id="content-types">
               <option value="text/plain"></option>
               <option value="text/html"></option>

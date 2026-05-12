@@ -40,7 +40,7 @@ const textInputGroup = getElementById('text-input-group')
 /** @type {HTMLTextAreaElement} */
 const textInput = getElementById('text')
 /** @type {NodeListOf<HTMLInputElement>} */
-const locationCheckboxes = document.querySelectorAll('input[name="locations"]')
+let locationCheckboxes = document.querySelectorAll('input[name="locations"]')
 /** @type {HTMLElement} */
 const locationsHelp = getElementById('locations-help')
 /** @type {HTMLElement} */
@@ -88,7 +88,7 @@ function openDialog(linkData) {
 
       const currentLocations = any(linkData).locations ?? []
 
-      setLocationCheckboxesForEdit(currentLocations, linkData.type)
+      setLocationCheckboxesForEdit(currentLocations)
       locationsHelp.textContent =
         'Add or remove providers. Select a new file to replace the file content.'
 
@@ -123,21 +123,43 @@ function closeDialog() {
 /**
  * Pre-check location checkboxes for edit mode.
  * @param {string[]} currentLocations
- * @param {string} storedType
  */
-function setLocationCheckboxesForEdit(currentLocations, storedType) {
+function setLocationCheckboxesForEdit(currentLocations) {
   locationCheckboxes.forEach((cb) => {
     cb.checked = currentLocations.includes(cb.value)
     cb.disabled = false
   })
 }
 
-/** Restore all location checkboxes to their default create-mode state. */
+/** Restore all location checkboxes. */
 function resetLocationCheckboxes() {
   locationCheckboxes.forEach((cb) => {
     cb.disabled = false
-    cb.checked = cb.value === 'inline'
   })
+}
+
+/** Fallback order when /api/providers is unavailable. */
+const FALLBACK_PROVIDERS = [
+  { id: 'hc-cdn', name: 'Hack Club CDN (70kb, forever)' },
+  { id: 'catbox', name: 'Catbox (200mb, forever)' },
+  { id: 'litterbox', name: 'Litterbox (1gb, 72h)' },
+  { id: 'gofile', name: 'Gofile (unlimited, temporary, slow)' },
+]
+
+async function loadProviders() {
+  const container = getElementById('dynamic-locations')
+  const makeCheckbox = (/** @type {{ id: string; name: string }} */ p) =>
+    `<label class="checkbox-label"><input type="checkbox" name="locations" value="${p.id}" /><span>${p.name}</span></label>`
+  try {
+    const res = await fetch('/api/providers')
+    if (!res.ok) throw new Error('failed')
+    /** @type {{ id: string; name: string }[]} */
+    const providers = await res.json()
+    container.innerHTML = providers.map(makeCheckbox).join('')
+  } catch {
+    container.innerHTML = FALLBACK_PROVIDERS.map(makeCheckbox).join('')
+  }
+  locationCheckboxes = document.querySelectorAll('input[name="locations"]')
 }
 
 // ── Form field visibility ─────────────────────────────────────────────────────
@@ -840,4 +862,5 @@ handleTypeChange()
 updateFilenameHelp()
 
 // Load initial data
+loadProviders()
 renderLinks()
