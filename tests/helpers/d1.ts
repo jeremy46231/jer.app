@@ -1,4 +1,8 @@
-import { Database, type Statement as BunStatement } from 'bun:sqlite'
+import {
+  Database,
+  type Statement as BunStatement,
+  type SQLQueryBindings,
+} from 'bun:sqlite'
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 
@@ -142,12 +146,12 @@ class MockD1PreparedStatement {
     return rows.map((r) => r.map(normalizeValue)) as T[]
   }
 
-  private normalizeParams(): unknown[] {
-    return this.params.map((p) => {
+  private normalizeParams(): SQLQueryBindings[] {
+    return this.params.map((p): SQLQueryBindings => {
       if (p === undefined) return null
       if (typeof p === 'boolean') return p ? 1 : 0
       if (p instanceof Uint8Array) return p
-      return p
+      return p as SQLQueryBindings
     })
   }
 }

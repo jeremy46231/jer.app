@@ -10,7 +10,10 @@
     "run_worker_first": true,
   },
   "observability": {
-    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "invocation_logs": true,
+    },
   },
   "d1_databases": [
     {

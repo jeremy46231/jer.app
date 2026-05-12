@@ -15,13 +15,6 @@
 // `Content-Length` header when the stream is used as a request/response body.
 // We don't need that side-effect for unit tests; a plain `TransformStream`
 // suffices.
-declare global {
-  // eslint-disable-next-line no-var
-  var FixedLengthStream:
-    | (new (length: number | bigint) => TransformStream<Uint8Array, Uint8Array>)
-    | undefined
-}
-
 if (typeof (globalThis as any).FixedLengthStream === 'undefined') {
   ;(globalThis as any).FixedLengthStream = class FixedLengthStream<
     I = Uint8Array,
@@ -40,7 +33,7 @@ if (typeof (globalThis as any).FixedLengthStream === 'undefined') {
 // Workers exposes a synchronous, constant-time equality check on
 // `crypto.subtle`. The standard WebCrypto API doesn't define one, so we add a
 // drop-in replacement.
-const subtle = (globalThis.crypto as unknown as { subtle: any }).subtle
+const subtle = ((globalThis as any).crypto as { subtle: any }).subtle
 if (subtle && typeof subtle.timingSafeEqual !== 'function') {
   subtle.timingSafeEqual = (
     a: ArrayBuffer | ArrayBufferView,

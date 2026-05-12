@@ -4,7 +4,11 @@ function timingSafeEqual(a: string, b: string): boolean {
   const aBytes = encoder.encode(a)
   const bBytes = encoder.encode(b)
   if (aBytes.byteLength !== bBytes.byteLength) return false
-  return crypto.subtle.timingSafeEqual(aBytes, bBytes)
+  return (
+    crypto.subtle as unknown as {
+      timingSafeEqual(a: ArrayBufferView, b: ArrayBufferView): boolean
+    }
+  ).timingSafeEqual(aBytes, bBytes)
 }
 
 function getSessionCookie(request: Request): string | null {

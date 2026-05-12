@@ -58,7 +58,12 @@ describe('InlineStorageProvider.has', () => {
 
   test('is false for a redirect or attachment', () => {
     expect(
-      provider.has({ path: 'p', type: 'redirect', url: 'https://x' })
+      provider.has({
+        path: 'p',
+        type: 'redirect',
+        url: 'https://x',
+        status: 302,
+      })
     ).toBe(false)
     expect(
       provider.has({
@@ -102,7 +107,7 @@ describe('InlineStorageProvider.upload', () => {
 describe('InlineStorageProvider.download', () => {
   test('returns null for non-inline links', async () => {
     const res = await provider.download(
-      { path: 'p', type: 'redirect', url: 'https://x' },
+      { path: 'p', type: 'redirect', url: 'https://x', status: 302 },
       new Headers()
     )
     expect(res).toBeNull()

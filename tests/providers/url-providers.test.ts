@@ -54,7 +54,12 @@ for (const { name, provider } of providers) {
 
     test('has() is false for non-attachment links', () => {
       expect(
-        provider.has({ path: 'p', type: 'redirect', url: 'https://x' })
+        provider.has({
+          path: 'p',
+          type: 'redirect',
+          url: 'https://x',
+          status: 302,
+        })
       ).toBe(false)
     })
 

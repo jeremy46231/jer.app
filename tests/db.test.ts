@@ -35,6 +35,7 @@ describe('createLink + getLinkWithContent', () => {
       path: 'g',
       type: 'redirect',
       url: 'https://example.com/',
+      status: 302,
     })
 
     const link = (await getLinkWithContent(env.DB, 'g')) as RedirectLink
@@ -129,6 +130,7 @@ describe('getLinks', () => {
       path: 'r',
       type: 'redirect',
       url: 'https://example.com',
+      status: 302,
     })
     await createLink(env.DB, {
       path: 'i',
@@ -182,6 +184,7 @@ describe('deleteLink', () => {
       path: 'g',
       type: 'redirect',
       url: 'https://example.com/',
+      status: 302,
     })
     await deleteLink(env.DB, 'g')
     expect(await getLinkWithContent(env.DB, 'g')).toBeNull()

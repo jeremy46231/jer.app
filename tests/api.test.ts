@@ -16,12 +16,14 @@ afterEach(() => {
 
 const BASE = 'https://jer.app'
 
-function jsonRequest(path: string, method: string, body?: unknown): Request {
+type CfRequest = Parameters<typeof handleAPI>[0]
+
+function jsonRequest(path: string, method: string, body?: unknown): CfRequest {
   return new Request(BASE + path, {
     method,
     headers: { 'Content-Type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body),
-  })
+  }) as unknown as CfRequest
 }
 
 describe('handleAPI auth', () => {
@@ -46,7 +48,7 @@ describe('handleAPI auth', () => {
       const req = new Request(`${BASE}/api/links`, {
         method: 'GET',
         headers: { Cookie: sessionCookieHeader('pw') },
-      })
+      }) as unknown as CfRequest
       const res = await handleAPI(req, authedEnv)
       expect(res.status).toBe(200)
     } finally {
@@ -60,7 +62,7 @@ describe('GET /api/links', () => {
     const res = await handleAPI(jsonRequest('/api/links', 'GET'), env)
     expect(res.status).toBe(200)
     expect(res.headers.get('Content-Type')).toBe('application/json')
-    expect(await res.json()).toEqual([])
+    expect((await res.json()) as unknown).toEqual([])
   })
 
   test('returns previously created links', async () => {
@@ -135,7 +137,7 @@ describe('POST /api/links/upload (inline)', () => {
     qs: Record<string, string | string[]>,
     body: BodyInit | null,
     extraHeaders: Record<string, string> = {}
-  ): Request {
+  ): CfRequest {
     const url = new URL('/api/links/upload', BASE)
     for (const [k, v] of Object.entries(qs)) {
       if (Array.isArray(v)) {
@@ -148,7 +150,7 @@ describe('POST /api/links/upload (inline)', () => {
       method: 'POST',
       body,
       headers: extraHeaders,
-    })
+    }) as unknown as CfRequest
   }
 
   test('rejects missing required fields', async () => {
@@ -260,7 +262,9 @@ describe('DELETE /api/links', () => {
     )
 
     const res = await handleAPI(
-      new Request(`${BASE}/api/links?path=g`, { method: 'DELETE' }),
+      new Request(`${BASE}/api/links?path=g`, {
+        method: 'DELETE',
+      }) as unknown as CfRequest,
       env
     )
     expect(res.status).toBe(200)
@@ -269,7 +273,9 @@ describe('DELETE /api/links', () => {
 
   test('returns 400 when no path is provided', async () => {
     const res = await handleAPI(
-      new Request(`${BASE}/api/links`, { method: 'DELETE' }),
+      new Request(`${BASE}/api/links`, {
+        method: 'DELETE',
+      }) as unknown as CfRequest,
       env
     )
     expect(res.status).toBe(400)
@@ -299,7 +305,7 @@ describe('full lifecycle', () => {
         method: 'POST',
         body: payload,
         headers: { 'Content-Length': String(payload.byteLength) },
-      }),
+      }) as unknown as CfRequest,
       env
     )
     expect(upload.status).toBe(201)
@@ -311,7 +317,9 @@ describe('full lifecycle', () => {
     expect(list[0]!.type).toBe('inline_file')
 
     const del = await handleAPI(
-      new Request(`${BASE}/api/links?path=doc`, { method: 'DELETE' }),
+      new Request(`${BASE}/api/links?path=doc`, {
+        method: 'DELETE',
+      }) as unknown as CfRequest,
       env
     )
     expect(del.status).toBe(200)

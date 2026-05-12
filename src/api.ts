@@ -103,14 +103,25 @@ export async function handleAPI(
     }
 
     const isInlineOnly = locations.length === 1 && locations[0] === 'inline'
-    await createLink(env.DB, {
-      path,
-      type: isInlineOnly ? 'inline_file' : 'attachment_file',
-      contentType,
-      filename,
-      download,
-      ...(isInlineOnly ? { file: new Uint8Array() } : {}),
-    })
+    if (isInlineOnly) {
+      await createLink(env.DB, {
+        path,
+        type: 'inline_file',
+        contentType,
+        filename,
+        download,
+        file: new Uint8Array(),
+      })
+    } else {
+      await createLink(env.DB, {
+        path,
+        type: 'attachment_file',
+        contentType,
+        filename,
+        download,
+        providerUrls: {},
+      })
+    }
 
     // Clone the request body stream for each provider
     const streams: ReadableStream<Uint8Array>[] = []

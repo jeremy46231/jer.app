@@ -49,7 +49,7 @@ describe('worker entry (fetch handler)', () => {
   test('routes /api/* to the API handler', async () => {
     const res = await fetchWith('/api/links')
     expect(res.status).toBe(200)
-    expect(await res.json()).toEqual([])
+    expect((await res.json()) as unknown).toEqual([])
   })
 
   test('serves a link when one matches', async () => {

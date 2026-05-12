@@ -82,7 +82,7 @@ const cases: ProviderCase[] = [
 
 for (const tc of cases) {
   describe.skipIf(!networkEnabled)(`${tc.name} round trip (network)`, () => {
-    test.skipIf(tc.skipUpload)(
+    test.skipIf(!!tc.skipUpload)(
       'uploads a small file and records a URL',
       async () => {
         const path = `test-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
@@ -110,7 +110,7 @@ for (const tc of cases) {
       60_000
     )
 
-    test.skipIf(tc.skipUpload || tc.skipDownloadCheck)(
+    test.skipIf(!!tc.skipUpload || !!tc.skipDownloadCheck)(
       'downloads return the same bytes that were uploaded',
       async () => {
         const path = `test-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`

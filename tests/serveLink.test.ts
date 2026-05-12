@@ -13,8 +13,12 @@ afterEach(() => {
   env.__close()
 })
 
-function get(path: string): Request {
-  return new Request(new URL(path, 'https://jer.app').toString())
+type CfRequest = Parameters<typeof serveLink>[0]
+
+function get(path: string): CfRequest {
+  return new Request(
+    new URL(path, 'https://jer.app').toString()
+  ) as unknown as CfRequest
 }
 
 describe('serveLink', () => {
@@ -28,6 +32,7 @@ describe('serveLink', () => {
       path: 'g',
       type: 'redirect',
       url: 'https://example.com/destination',
+      status: 302,
     })
 
     const res = await serveLink(get('/g'), env)
@@ -79,6 +84,7 @@ describe('serveLink', () => {
       path: 'hello world',
       type: 'redirect',
       url: 'https://example.com/',
+      status: 302,
     })
 
     const res = await serveLink(get('/hello%20world'), env)

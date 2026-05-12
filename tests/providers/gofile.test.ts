@@ -28,7 +28,12 @@ describe('GofileStorageProvider', () => {
     ).toBe(false)
 
     expect(
-      provider.has({ path: 'p', type: 'redirect', url: 'https://x' })
+      provider.has({
+        path: 'p',
+        type: 'redirect',
+        url: 'https://x',
+        status: 302,
+      })
     ).toBe(false)
   })
 
