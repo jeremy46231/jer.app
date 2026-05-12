@@ -296,13 +296,6 @@ export async function updateLink(
       )
       .run()
   }
-
-  if (newPath !== oldPath) {
-    await db
-      .prepare('UPDATE link_providers SET path = ? WHERE path = ?')
-      .bind(newPath, oldPath)
-      .run()
-  }
 }
 
 export async function deleteLink(db: D1Database, path: string): Promise<void> {
