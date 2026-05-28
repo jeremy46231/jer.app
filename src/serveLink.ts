@@ -5,11 +5,11 @@ const MAX_REWRITES = 10
 
 function mergeSearch(a: string, b: string): string {
   // a and b are either '' or start with '?'
-  const pa = new URLSearchParams(a.slice(1))
-  const pb = new URLSearchParams(b.slice(1))
-  for (const [k, v] of pb) pa.append(k, v)
-  const s = pa.toString()
-  return s ? '?' + s : ''
+  // Use string concatenation to preserve percent-encoding (e.g. %20 vs +)
+  if (!a && !b) return ''
+  if (!a) return b
+  if (!b) return a
+  return a + '&' + b.slice(1)
 }
 
 function buildExternalUrl(
