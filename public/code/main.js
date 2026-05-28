@@ -680,7 +680,11 @@ async function renderLinks() {
             'beforeend',
             html`
               <td>
-                <a href="${link.url}" target="_blank">${link.url}</a>
+                <a href="${link.url}" target="_blank"
+                  >${link.url.length > 150
+                    ? link.url.slice(0, 150) + '...'
+                    : link.url}</a
+                >
               </td>
             `
           )
