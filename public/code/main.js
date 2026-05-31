@@ -101,6 +101,11 @@ function openDialog(linkData) {
     editingLinkType = null
     dialogTitle.textContent = 'Add New Link'
     submitBtn.textContent = 'Create Link'
+    const now = new Date()
+    const yyyy = now.getFullYear()
+    const mm = String(now.getMonth() + 1).padStart(2, '0')
+    const dd = String(now.getDate()).padStart(2, '0')
+    pathInput.value = `${yyyy}-${mm}-${dd}-`
     handleTypeChange()
     updateFilenameHelp()
   }
