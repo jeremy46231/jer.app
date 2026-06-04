@@ -778,7 +778,11 @@ export function showMessage(message, type) {
   const messageDiv = document.createElement('div')
   messageDiv.className = `${type}-message`
   messageDiv.textContent = message
+  // Render in the top layer (via the popover API) so toasts appear above the
+  // modal dialog, which also lives in the top layer.
+  messageDiv.popover = 'manual'
   document.body.appendChild(messageDiv)
+  messageDiv.showPopover()
 
   if (type === 'success') {
     messageTimeout = setTimeout(() => {

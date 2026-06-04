@@ -81,12 +81,13 @@ dialog {
   position: fixed;
   inset: 0;
   margin: auto;
-  display: flex;
   flex-direction: column;
+}
+dialog[open] {
+  display: flex;
 }
 dialog::backdrop {
   background: rgba(0, 0, 0, 0.4);
-  z-index: 10;
 }
 
 .dialog-header {
@@ -132,9 +133,8 @@ dialog::backdrop {
 .success-message,
 .info-message {
   position: fixed;
-  bottom: 1.5rem;
-  right: 1.5rem;
-  z-index: 100;
+  inset: auto 1.5rem 1.5rem auto;
+  margin: 0;
   max-width: 24rem;
   padding: 10px 14px;
   border-radius: 6px;
