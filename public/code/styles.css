@@ -120,11 +120,10 @@ dialog::backdrop {
   position: fixed;
   bottom: 1.5rem;
   right: 1.5rem;
-  z-index: 200;
+  z-index: 9999;
   max-width: 24rem;
   padding: 10px 14px;
   border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 .error-message {
   color: red;
@@ -211,4 +210,8 @@ h4,
 h5,
 h6 {
   text-wrap: balance;
+}
+
+a:visited {
+  color: inherit;
 }
