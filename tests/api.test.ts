@@ -83,6 +83,8 @@ describe('GET /api/links', () => {
       type: 'redirect',
       url: 'https://example.com/',
       status: 302,
+      notify: false,
+      notifyPing: false,
     })
   })
 })
@@ -105,6 +107,8 @@ describe('POST /api/links (non-file)', () => {
       type: 'redirect',
       url: 'https://github.com',
       status: 302,
+      notify: false,
+      notifyPing: false,
     })
   })
 

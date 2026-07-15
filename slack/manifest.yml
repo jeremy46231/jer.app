@@ -1,0 +1,42 @@
+# Slack app manifest for jer.app.
+#
+# This is a general-purpose bot for jer.app — click notifications are the first
+# feature, but it's intended to back any future Slack integrations too. Add
+# scopes/features below as new features need them.
+#
+# How to use:
+#   1. Go to https://api.slack.com/apps -> "Create New App" -> "From a manifest".
+#   2. Pick your workspace, paste this file, and create the app.
+#   3. Open "Install App" in the sidebar and install it to your workspace.
+#   4. Copy the "Bot User OAuth Token" (starts with "xoxb-") -> this is
+#      SLACK_BOT_TOKEN.
+#   5. Invite the bot to the channel you want it to post in:
+#      in Slack, type `/invite @jer.app` in that channel.
+#   6. Get the channel id (SLACK_CHANNEL_ID): open the channel, click its name,
+#      the id (e.g. C0123456789) is at the bottom of the "About" tab.
+#   7. Get your own user id (SLACK_USER_ID): click your profile picture ->
+#      "Profile" -> the "..." menu -> "Copy member ID" (e.g. U0123456789).
+#
+# Then set the secrets — see the README for the exact commands.
+
+display_information:
+  name: jer.app
+  background_color: '#1a1a1a'
+
+features:
+  bot_user:
+    display_name: jer.app
+    always_online: true
+
+oauth_config:
+  scopes:
+    bot:
+      # Post messages (used by click notifications today). The bot must be
+      # invited to any channel it posts in. Add more scopes here as new
+      # features need them.
+      - chat:write
+
+settings:
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false

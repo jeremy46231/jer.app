@@ -50,7 +50,28 @@ describe('createLink + getLinkWithContent', () => {
       type: 'redirect',
       url: 'https://example.com/',
       status: 302,
+      notify: false,
+      notifyPing: false,
     })
+  })
+
+  test('round-trips click notification flags', async () => {
+    await createLink(env.DB, {
+      path: 'n',
+      type: 'redirect',
+      url: 'https://example.com/',
+      status: 302,
+      notify: true,
+      notifyPing: true,
+    })
+
+    const link = (await getLinkWithContent(env.DB, 'n')) as RedirectLink
+    expect(link.notify).toBe(true)
+    expect(link.notifyPing).toBe(true)
+
+    const listed = (await getLinks(env.DB)).find((l) => l.path === 'n')
+    expect(listed?.notify).toBe(true)
+    expect(listed?.notifyPing).toBe(true)
   })
 
   test('round-trips a file link with inline binary content', async () => {

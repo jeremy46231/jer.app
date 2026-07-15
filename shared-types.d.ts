@@ -10,6 +10,10 @@ export type FileLocation =
 
 type GenericLink = {
   path: string
+  /** Send a Slack message every time this link is clicked. */
+  notify?: boolean
+  /** When notifying, prepend an @-mention of the configured Slack user. */
+  notifyPing?: boolean
 }
 
 export type RedirectLink = GenericLink & {

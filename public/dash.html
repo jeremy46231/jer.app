@@ -133,6 +133,25 @@
           </div>
         </div>
 
+        <!-- Slack click notifications (applies to every link type) -->
+        <div class="form-group" id="notify-group">
+          <label for="notify">
+            <input type="checkbox" id="notify" name="notify" />
+            Notify on click
+          </label>
+          <small>Send a Slack message every time this link is clicked</small>
+          <div id="notify-controls" style="display: none; margin-top: 0.5rem">
+            <label for="notify-ping">
+              <input type="checkbox" id="notify-ping" name="notify-ping" />
+              Ping me at the start of the message
+            </label>
+            <small>
+              Mentions you (the configured Slack user) so it hits your
+              notifications
+            </small>
+          </div>
+        </div>
+
         <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem">
           <button type="submit" id="submit-btn">Create Link</button>
           <button type="button" id="cancel-btn">Cancel</button>

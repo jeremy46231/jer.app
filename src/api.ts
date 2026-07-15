@@ -21,6 +21,8 @@ type RedirectLinkCreationData = GenericLinkCreationData & {
   type: 'redirect'
   url: string
   status?: 301 | 302 | 307 | 308
+  notify?: boolean
+  notifyPing?: boolean
 }
 export type NonFileLinkCreationData = RedirectLinkCreationData
 
@@ -63,7 +65,7 @@ export async function handleAPI(
     const data = (await request.json()) as NonFileLinkCreationData
     switch (data.type) {
       case 'redirect':
-        const { path, type, url, status } = data
+        const { path, type, url, status, notify, notifyPing } = data
         if (!path || !type || type !== 'redirect' || !url) {
           return new Response('Missing required fields', { status: 400 })
         }
@@ -72,6 +74,8 @@ export async function handleAPI(
           type: 'redirect',
           url,
           status: status ?? 302,
+          notify: !!notify,
+          notifyPing: !!notifyPing,
         })
         return new Response('Link created successfully', { status: 201 })
       default:
@@ -90,6 +94,8 @@ export async function handleAPI(
     const filename = url.searchParams.get('filename')
     const locations = url.searchParams.getAll('locations')
     const download = url.searchParams.get('download') === 'true'
+    const notify = url.searchParams.get('notify') === 'true'
+    const notifyPing = url.searchParams.get('notify-ping') === 'true'
 
     if (!path || !contentType || !filename || locations.length === 0) {
       return new Response(
@@ -119,6 +125,8 @@ export async function handleAPI(
       contentType,
       filename,
       download,
+      notify,
+      notifyPing,
       providerUrls: {},
       locations: [],
     })
@@ -248,9 +256,13 @@ export async function handleAPI(
       filename?: string
       download?: boolean
       locations?: string[]
+      notify?: boolean
+      notifyPing?: boolean
     }
 
     const { oldPath, path: newPath, type } = data
+    const notify = !!data.notify
+    const notifyPing = !!data.notifyPing
     if (!oldPath || !newPath || !type) {
       return new Response('Missing required fields: oldPath, path, type', {
         status: 400,
@@ -269,6 +281,8 @@ export async function handleAPI(
         type: 'redirect',
         url: data.url,
         status: (data.status ?? 302) as RedirectLink['status'],
+        notify,
+        notifyPing,
       }
     } else if (type === 'file') {
       if (!data.contentType || !data.filename) {
@@ -373,6 +387,8 @@ export async function handleAPI(
         contentType: data.contentType,
         filename: data.filename,
         download: !!data.download,
+        notify,
+        notifyPing,
         providerUrls: {},
         locations: [],
       }
@@ -392,6 +408,8 @@ export async function handleAPI(
     const filename = url.searchParams.get('filename')
     const locations = url.searchParams.getAll('locations')
     const download = url.searchParams.get('download') === 'true'
+    const notify = url.searchParams.get('notify') === 'true'
+    const notifyPing = url.searchParams.get('notify-ping') === 'true'
 
     if (
       !oldPath ||
@@ -500,6 +518,8 @@ export async function handleAPI(
       contentType,
       filename,
       download,
+      notify,
+      notifyPing,
       providerUrls: {},
       locations: [],
     }

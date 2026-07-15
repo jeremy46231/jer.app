@@ -58,7 +58,7 @@ export default {
         return await handleAPI(request, env)
       }
 
-      const linkResponse = await serveLink(request, env)
+      const linkResponse = await serveLink(request, env, ctx)
       if (linkResponse) {
         return linkResponse
       }

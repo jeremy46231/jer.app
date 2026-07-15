@@ -250,3 +250,114 @@ describe('redirect routing', () => {
     expect(res).toBeUndefined()
   })
 })
+
+describe('click notifications', () => {
+  /** A request carrying a User-Agent, IP and Cloudflare geo data. */
+  function clickReq(path: string): CfRequest {
+    const req = new Request(new URL(path, 'https://jer.app').toString(), {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+        'CF-Connecting-IP': '203.0.113.5',
+      },
+    })
+    Object.defineProperty(req, 'cf', {
+      value: { city: 'Austin', region: 'Texas', country: 'US' },
+      configurable: true,
+    })
+    return req as unknown as CfRequest
+  }
+
+  /** Collects waitUntil promises so the test can await them. */
+  function makeCtx() {
+    const promises: Promise<unknown>[] = []
+    const ctx = {
+      waitUntil: (p: Promise<unknown>) => promises.push(p),
+      passThroughOnException: () => {},
+      props: {},
+    } as unknown as ExecutionContext
+    return { ctx, settled: () => Promise.all(promises) }
+  }
+
+  let originalFetch: typeof fetch
+  /** @type {Array<{url: string; body: any}>} */
+  let calls: { url: string; body: Record<string, unknown> }[]
+
+  beforeEach(() => {
+    env.SLACK_BOT_TOKEN = 'xoxb-test'
+    env.SLACK_CHANNEL_ID = 'C123'
+    env.SLACK_USER_ID = 'U999'
+    calls = []
+    originalFetch = globalThis.fetch
+    globalThis.fetch = (async (
+      input: RequestInfo | URL,
+      init?: RequestInit
+    ) => {
+      calls.push({
+        url: String(input),
+        body: init?.body ? JSON.parse(String(init.body)) : {},
+      })
+      return new Response(JSON.stringify({ ok: true }), { status: 200 })
+    }) as typeof fetch
+  })
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch
+  })
+
+  test('does not notify when the link has notify disabled', async () => {
+    await createLink(env.DB, {
+      path: 'q',
+      type: 'redirect',
+      url: 'https://example.com/',
+      status: 302,
+    })
+    const { ctx, settled } = makeCtx()
+    await serveLink(clickReq('/q'), env, ctx)
+    await settled()
+    expect(calls).toHaveLength(0)
+  })
+
+  test('posts a Slack message with parsed click details', async () => {
+    await createLink(env.DB, {
+      path: 'q',
+      type: 'redirect',
+      url: 'https://example.com/dest',
+      status: 302,
+      notify: true,
+      notifyPing: true,
+    })
+    const { ctx, settled } = makeCtx()
+    const res = await serveLink(clickReq('/q'), env, ctx)
+    expect(res!.status).toBe(302)
+    await settled()
+
+    expect(calls).toHaveLength(1)
+    expect(calls[0].url).toBe('https://slack.com/api/chat.postMessage')
+    const body = calls[0].body
+    expect(body.channel).toBe('C123')
+    expect(String(body.text)).toContain('<@U999>') // ping prefix
+    expect(String(body.text)).toContain('/q')
+
+    const rendered = JSON.stringify(body.blocks)
+    expect(rendered).toContain('203.0.113.5') // IP
+    expect(rendered).toContain('Austin, Texas, US') // geo
+    expect(rendered).toContain('Chrome 126.0.0.0 on Windows · Desktop') // UA
+    expect(rendered).toContain('example.com/dest') // destination
+  })
+
+  test('omits the ping when notifyPing is false', async () => {
+    await createLink(env.DB, {
+      path: 'q',
+      type: 'redirect',
+      url: 'https://example.com/',
+      status: 302,
+      notify: true,
+      notifyPing: false,
+    })
+    const { ctx, settled } = makeCtx()
+    await serveLink(clickReq('/q'), env, ctx)
+    await settled()
+    expect(String(calls[0].body.text)).not.toContain('<@U999>')
+  })
+})

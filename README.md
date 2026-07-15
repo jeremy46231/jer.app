@@ -73,6 +73,39 @@ Cloudflare:
    3. Click "Add domain". If you own the domain on Clouflare, it will be set up
       automatically. If not, follow the instructions to set up DNS records.
 
+## Slack click notifications
+
+Any link can post a message to a Slack channel each time it's clicked.
+
+### Set up the bot
+
+1. Create the Slack app from the manifest at
+   [`slack/manifest.yml`](slack/manifest.yml) (api.slack.com → Create New App →
+   From a manifest), then **Install to Workspace**. It's a general-purpose
+   jer.app bot — click notifications are just its first feature.
+2. Invite the bot to the target channel: `/invite @jer.app` in that channel.
+3. Collect three values (the manifest file explains where to click for each):
+   - **`SLACK_BOT_TOKEN`** — the Bot User OAuth Token (starts with `xoxb-`)
+   - **`SLACK_CHANNEL_ID`** — the channel id (e.g. `C0123456789`)
+   - **`SLACK_USER_ID`** — your own member id (e.g. `U0123456789`), used for
+     pings
+
+### Where to put them
+
+- **Production (Cloudflare):** add all three under **Settings → Variables and
+  Secrets** as Secret variables, or from the CLI:
+
+  ```sh
+  wrangler secret put SLACK_BOT_TOKEN
+  wrangler secret put SLACK_CHANNEL_ID
+  wrangler secret put SLACK_USER_ID
+  ```
+
+- **Local dev:** fill in the `SLACK_*` entries in `.dev.vars` (gitignored).
+
+If `SLACK_BOT_TOKEN` or `SLACK_CHANNEL_ID` is missing, notifications are simply
+skipped (a warning is logged); if `SLACK_USER_ID` is missing, pings are omitted.
+
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file

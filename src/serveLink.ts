@@ -1,5 +1,6 @@
 import { findLink } from './db'
 import { getProviders } from './storage/providers'
+import { sendClickNotification } from './slack'
 
 const MAX_REWRITES = 10
 
@@ -28,7 +29,8 @@ function buildExternalUrl(
 
 export async function serveLink(
   request: Request<unknown, IncomingRequestCfProperties<unknown>>,
-  env: Env
+  env: Env,
+  ctx?: ExecutionContext
 ): Promise<Response | undefined> {
   const url = new URL(request.url)
   let currentPath = decodeURIComponent(url.pathname.slice(1))
@@ -39,6 +41,15 @@ export async function serveLink(
     if (!match) return undefined
 
     const { link, remainder } = match
+
+    // Fire a Slack notification for the clicked link, without blocking the
+    // response. This runs for every matched link in a rewrite chain that has
+    // notifications enabled.
+    if (link.notify) {
+      const notify = sendClickNotification(env, request, link)
+      if (ctx) ctx.waitUntil(notify)
+      else void notify
+    }
 
     switch (link.type) {
       case 'redirect': {

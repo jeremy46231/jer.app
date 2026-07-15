@@ -8,6 +8,9 @@ declare namespace Cloudflare {
     REDIRECT_URL: string
     COPYPARTY_BACKENDS: string
     HC_CDN_KEY: string
+    SLACK_BOT_TOKEN: string
+    SLACK_CHANNEL_ID: string
+    SLACK_USER_ID: string
     DB: D1Database
     ASSETS: Fetcher
   }

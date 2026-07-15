@@ -8,13 +8,15 @@ import type {
 
 type GenericLink = {
   path: string
+  notify?: boolean
+  notifyPing?: boolean
 }
 
 export async function getLinks(db: D1Database): Promise<Link[]> {
   const result = await db
     .prepare(
       `
-        SELECT l.path, l.type, l.redirect_url, l.redirect_status, l.content_type, l.filename, l.download,
+        SELECT l.path, l.type, l.redirect_url, l.redirect_status, l.content_type, l.filename, l.download, l.notify, l.notify_ping,
                CASE WHEN l.file IS NOT NULL AND length(l.file) > 0 THEN 1 ELSE 0 END AS has_inline,
                json_group_object(lp.provider_id, lp.url) FILTER (WHERE lp.provider_id IS NOT NULL) AS provider_urls
         FROM links l
@@ -32,6 +34,8 @@ export async function getLinks(db: D1Database): Promise<Link[]> {
     content_type?: string
     filename?: string
     download?: boolean
+    notify?: number
+    notify_ping?: number
     has_inline: number
     provider_urls: string | null
   }[]
@@ -39,6 +43,8 @@ export async function getLinks(db: D1Database): Promise<Link[]> {
   return rows.map((row) => {
     const generalAttributes = {
       path: row.path,
+      notify: !!row.notify,
+      notifyPing: !!row.notify_ping,
     } satisfies GenericLink
 
     switch (row.type) {
@@ -82,7 +88,7 @@ export async function getLinkWithContent(
   const result = await db
     .prepare(
       `
-        SELECT l.path, l.type, l.redirect_url, l.redirect_status, l.file, l.content_type, l.filename, l.download,
+        SELECT l.path, l.type, l.redirect_url, l.redirect_status, l.file, l.content_type, l.filename, l.download, l.notify, l.notify_ping,
                CASE WHEN l.file IS NOT NULL AND length(l.file) > 0 THEN 1 ELSE 0 END AS has_inline,
                json_group_object(lp.provider_id, lp.url) FILTER (WHERE lp.provider_id IS NOT NULL) AS provider_urls
         FROM links l
@@ -105,12 +111,16 @@ export async function getLinkWithContent(
     content_type?: string
     filename?: string
     download?: boolean
+    notify?: number
+    notify_ping?: number
     has_inline: number
     provider_urls: string | null
   }
 
   const generalAttributes = {
     path: row.path,
+    notify: !!row.notify,
+    notifyPing: !!row.notify_ping,
   } satisfies GenericLink
 
   switch (row.type) {
@@ -158,7 +168,7 @@ export async function findLink(
   const result = await db
     .prepare(
       `
-        SELECT l.path, l.type, l.redirect_url, l.redirect_status, l.file, l.content_type, l.filename, l.download,
+        SELECT l.path, l.type, l.redirect_url, l.redirect_status, l.file, l.content_type, l.filename, l.download, l.notify, l.notify_ping,
                CASE WHEN l.file IS NOT NULL AND length(l.file) > 0 THEN 1 ELSE 0 END AS has_inline,
                json_group_object(lp.provider_id, lp.url) FILTER (WHERE lp.provider_id IS NOT NULL) AS provider_urls
         FROM links l
@@ -183,13 +193,19 @@ export async function findLink(
     content_type?: string
     filename?: string
     download?: boolean
+    notify?: number
+    notify_ping?: number
     has_inline: number
     provider_urls: string | null
   }
 
   const remainder = requestPath.slice(row.path.length)
 
-  const generalAttributes = { path: row.path } satisfies GenericLink
+  const generalAttributes = {
+    path: row.path,
+    notify: !!row.notify,
+    notifyPing: !!row.notify_ping,
+  } satisfies GenericLink
 
   let link: LinkWithContent
   switch (row.type) {
@@ -236,22 +252,32 @@ export async function createLink(
 ): Promise<void> {
   const { path, type } = linkData
 
+  const notify = !!linkData.notify
+  const notifyPing = !!linkData.notifyPing
+
   if (type === 'redirect') {
     await db
       .prepare(
         `
-          INSERT INTO links (path, type, redirect_url, redirect_status)
-          VALUES (?, ?, ?, ?)
+          INSERT INTO links (path, type, redirect_url, redirect_status, notify, notify_ping)
+          VALUES (?, ?, ?, ?, ?, ?)
         `
       )
-      .bind(path, type, linkData.url, linkData.status ?? 302)
+      .bind(
+        path,
+        type,
+        linkData.url,
+        linkData.status ?? 302,
+        notify,
+        notifyPing
+      )
       .run()
   } else if (type === 'file') {
     await db
       .prepare(
         `
-          INSERT INTO links (path, type, content_type, filename, download)
-          VALUES (?, ?, ?, ?, ?)
+          INSERT INTO links (path, type, content_type, filename, download, notify, notify_ping)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
         `
       )
       .bind(
@@ -259,7 +285,9 @@ export async function createLink(
         type,
         linkData.contentType,
         linkData.filename,
-        linkData.download
+        linkData.download,
+        notify,
+        notifyPing
       )
       .run()
   } else {
@@ -273,18 +301,20 @@ export async function updateLink(
   data: Link
 ): Promise<void> {
   const newPath = data.path
+  const notify = !!data.notify
+  const notifyPing = !!data.notifyPing
 
   if (data.type === 'redirect') {
     await db
       .prepare(
-        'UPDATE links SET path = ?, redirect_url = ?, redirect_status = ? WHERE path = ?'
+        'UPDATE links SET path = ?, redirect_url = ?, redirect_status = ?, notify = ?, notify_ping = ? WHERE path = ?'
       )
-      .bind(newPath, data.url, data.status ?? 302, oldPath)
+      .bind(newPath, data.url, data.status ?? 302, notify, notifyPing, oldPath)
       .run()
   } else {
     await db
       .prepare(
-        'UPDATE links SET path = ?, type = ?, content_type = ?, filename = ?, download = ? WHERE path = ?'
+        'UPDATE links SET path = ?, type = ?, content_type = ?, filename = ?, download = ?, notify = ?, notify_ping = ? WHERE path = ?'
       )
       .bind(
         newPath,
@@ -292,6 +322,8 @@ export async function updateLink(
         data.contentType,
         data.filename,
         data.download,
+        notify,
+        notifyPing,
         oldPath
       )
       .run()

@@ -52,6 +52,18 @@ const contentTypeHelp = getElementById('content-type-help')
 /** @type {HTMLElement} */
 const redirectStatusGroup =
   getElementById('redirect-status').closest('.form-group')
+/** @type {HTMLInputElement} */
+const notifyCheckbox = getElementById('notify')
+/** @type {HTMLDivElement} */
+const notifyControls = getElementById('notify-controls')
+/** @type {HTMLInputElement} */
+const notifyPingCheckbox = getElementById('notify-ping')
+
+/** Show the ping control only when notifications are enabled. */
+function handleNotifyChange() {
+  notifyControls.style.display = notifyCheckbox.checked ? 'block' : 'none'
+  if (!notifyCheckbox.checked) notifyPingCheckbox.checked = false
+}
 
 /** @type {string | null} null = create mode, string = path of link being edited */
 let editingPath = null
@@ -73,6 +85,10 @@ function openDialog(linkData) {
     dialogTitle.textContent = 'Edit Link'
     submitBtn.textContent = 'Save Changes'
     pathInput.value = linkData.path
+
+    notifyCheckbox.checked = !!any(linkData).notify
+    notifyPingCheckbox.checked = !!any(linkData).notifyPing
+    handleNotifyChange()
 
     if (linkData.type === 'redirect') {
       typeSelect.value = 'redirect'
@@ -108,6 +124,7 @@ function openDialog(linkData) {
     pathInput.value = `${yyyy}-${mm}-${dd}-`
     handleTypeChange()
     updateFilenameHelp()
+    handleNotifyChange()
   }
 
   dialog.showModal()
@@ -123,6 +140,7 @@ function closeDialog() {
   handleTypeChange()
   updateFilenameHelp()
   resetLocationCheckboxes()
+  handleNotifyChange()
 }
 
 /**
@@ -249,6 +267,8 @@ async function handleFormSubmit(event) {
         type: 'redirect',
         url: url,
         status: Number(formData.get('redirect-status')) || 302,
+        notify: notifyCheckbox.checked,
+        notifyPing: notifyCheckbox.checked && notifyPingCheckbox.checked,
       }
 
       const response = await fetch('/api/links', {
@@ -329,6 +349,11 @@ async function handleFormSubmit(event) {
         uploadUrl.searchParams.append('locations', location)
       })
       uploadUrl.searchParams.set('download', download.toString())
+      uploadUrl.searchParams.set('notify', notifyCheckbox.checked.toString())
+      uploadUrl.searchParams.set(
+        'notify-ping',
+        (notifyCheckbox.checked && notifyPingCheckbox.checked).toString()
+      )
 
       const response = await uploadWithProgress(
         uploadUrl.toString(),
@@ -424,6 +449,8 @@ async function submitEdit() {
           type: 'redirect',
           url: linkUrl,
           status,
+          notify: notifyCheckbox.checked,
+          notifyPing: notifyCheckbox.checked && notifyPingCheckbox.checked,
         }),
       })
       if (response.ok) {
@@ -486,6 +513,11 @@ async function submitEdit() {
           uploadUrl.searchParams.append('locations', l)
         )
         uploadUrl.searchParams.set('download', download.toString())
+        uploadUrl.searchParams.set('notify', notifyCheckbox.checked.toString())
+        uploadUrl.searchParams.set(
+          'notify-ping',
+          (notifyCheckbox.checked && notifyPingCheckbox.checked).toString()
+        )
 
         const response = await uploadWithProgress(
           uploadUrl.toString(),
@@ -539,6 +571,8 @@ async function submitEdit() {
             filename,
             download,
             locations: selectedLocations,
+            notify: notifyCheckbox.checked,
+            notifyPing: notifyCheckbox.checked && notifyPingCheckbox.checked,
           }),
         })
 
@@ -868,10 +902,12 @@ urlInput.addEventListener('input', () => {
 addLinkForm.addEventListener('submit', handleFormSubmit)
 contentTypeInput.addEventListener('input', updateFilenameHelp)
 pathInput.addEventListener('input', updateFilenameHelp)
+notifyCheckbox.addEventListener('change', handleNotifyChange)
 
 // Initialize form state
 handleTypeChange()
 updateFilenameHelp()
+handleNotifyChange()
 
 // Load initial data
 loadProviders()
