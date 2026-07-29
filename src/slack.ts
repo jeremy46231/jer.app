@@ -85,15 +85,17 @@ export async function sendClickNotification(
   const referer = request.headers.get('Referer')
   const network =
     cf && typeof cf.asOrganization === 'string' ? cf.asOrganization : undefined
+  const rawUserAgent = request.headers.get('User-Agent')
 
   const fields: SlackField[] = [
     field('Destination', destination),
     field('Location', locationLine(cf)),
     field('IP address', `\`${esc(ip)}\``),
-    field('Device', esc(formatUserAgent(request.headers.get('User-Agent')))),
+    field('Device', esc(formatUserAgent(rawUserAgent))),
   ]
   if (network) fields.push(field('Network', esc(network)))
   if (referer) fields.push(field('Referrer', esc(referer)))
+  if (rawUserAgent) fields.push(field('User-Agent', `\`${esc(rawUserAgent)}\``))
 
   const nowSeconds = Math.floor(Date.now() / 1000)
 

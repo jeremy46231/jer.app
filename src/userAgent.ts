@@ -39,8 +39,18 @@ function normalizeVersion(v: string | undefined): string | undefined {
   return cleaned || undefined
 }
 
+// Browsers pad versions with trailing zero components (Chrome's
+// "150.0.0.0", Firefox's occasional "128.0" patch release), which is just
+// noise. Drop trailing ".0" segments, e.g. "150.0.0.0" -> "150".
+function dropTrailingZeros(v: string | undefined): string | undefined {
+  if (!v) return v
+  const parts = v.split('.')
+  while (parts.length > 1 && parts[parts.length - 1] === '0') parts.pop()
+  return parts.join('.')
+}
+
 function match(ua: string, re: RegExp): string | undefined {
-  return normalizeVersion(ua.match(re)?.[1])
+  return dropTrailingZeros(normalizeVersion(ua.match(re)?.[1]))
 }
 
 function parseBrowser(ua: string): {
@@ -89,7 +99,7 @@ function parseOS(ua: string): { os?: string; osVersion?: string } {
   if (/\bWindows NT\b/.test(ua)) {
     // Windows NT 10.0 covers both Windows 10 and 11 — the UA can't distinguish.
     const nt = match(ua, /Windows NT ([\d.]+)/)
-    return { os: 'Windows', osVersion: nt === '10.0' ? undefined : nt }
+    return { os: 'Windows', osVersion: nt === '10' ? undefined : nt }
   }
   if (/\bAndroid\b/.test(ua)) {
     return { os: 'Android', osVersion: match(ua, /Android ([\d.]+)/) }
@@ -139,9 +149,16 @@ export function parseUserAgent(ua: string | null | undefined): ParsedUserAgent {
   }
 }
 
+const DEVICE_EMOJI: Record<ParsedUserAgent['device'], string> = {
+  Desktop: '🖥️',
+  Mobile: '📱',
+  Tablet: '📱',
+  Bot: '🤖',
+}
+
 /**
  * A single clean line summarising the parsed User-Agent, e.g.
- * "Chrome 126 on Windows · Desktop" or "Safari on iOS 17.4 · Mobile".
+ * "🖥️ Chrome 126 on Windows" or "📱 Safari on iOS 17.4".
  * Frozen version numbers are omitted.
  */
 export function formatUserAgent(ua: string | null | undefined): string {
@@ -161,5 +178,5 @@ export function formatUserAgent(ua: string | null | undefined): string {
 
   const platform = [browserPart, osPart].filter(Boolean).join(' on ')
   const label = platform || 'Unknown device'
-  return `${label} · ${parsed.device}`
+  return `${DEVICE_EMOJI[parsed.device]} ${label}`
 }

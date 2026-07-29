@@ -342,7 +342,10 @@ describe('click notifications', () => {
     const rendered = JSON.stringify(body.blocks)
     expect(rendered).toContain('203.0.113.5') // IP
     expect(rendered).toContain('Austin, Texas, US') // geo
-    expect(rendered).toContain('Chrome 126.0.0.0 on Windows · Desktop') // UA
+    expect(rendered).toContain('🖥️ Chrome 126 on Windows') // parsed UA
+    expect(rendered).toContain(
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
+    ) // raw UA
     expect(rendered).toContain('example.com/dest') // destination
   })
 
