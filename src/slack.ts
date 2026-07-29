@@ -29,6 +29,11 @@ function flagEmoji(cc: string | undefined): string {
   )
 }
 
+/** A string field that Cloudflare may or may not have been able to populate. */
+function str(value: unknown): string | undefined {
+  return typeof value === 'string' && value.length > 0 ? value : undefined
+}
+
 function locationLine(cf: IncomingRequestCfProperties | undefined): string {
   if (!cf) return 'Unknown'
   const parts = [cf.city, cf.region, cf.country].filter(
@@ -38,7 +43,60 @@ function locationLine(cf: IncomingRequestCfProperties | undefined): string {
     typeof cf.country === 'string' ? cf.country : undefined
   )
   const place = parts.length > 0 ? parts.join(', ') : 'Unknown'
-  return flag ? `${flag} ${place}` : place
+  const withTimezone = str(cf.timezone) ? `${place} · ${cf.timezone}` : place
+  return flag ? `${flag} ${withTimezone}` : withTimezone
+}
+
+/** A link to Google Maps for the request's approximate coordinates, if known. */
+function mapLink(
+  cf: IncomingRequestCfProperties | undefined
+): string | undefined {
+  const lat = str(cf?.latitude)
+  const lon = str(cf?.longitude)
+  if (!lat || !lon) return undefined
+  return `<https://www.google.com/maps?q=${lat},${lon}|📍 Open in Maps>`
+}
+
+/** "Google Cloud · AS396747", omitting whichever half is missing. */
+function networkLine(
+  cf: IncomingRequestCfProperties | undefined
+): string | undefined {
+  const org = str(cf?.asOrganization)
+  const asn =
+    typeof cf?.asn === 'number' && cf.asn > 0 ? `AS${cf.asn}` : undefined
+  const parts = [org, asn].filter((p): p is string => p !== undefined)
+  return parts.length > 0 ? parts.join(' · ') : undefined
+}
+
+/** "HTTP/2 · TLS 1.3", omitting whichever half is missing. */
+function connectionLine(
+  cf: IncomingRequestCfProperties | undefined
+): string | undefined {
+  const protocol = str(cf?.httpProtocol)
+  const tls = str(cf?.tlsVersion)
+  const parts = [
+    protocol,
+    tls ? tls.replace(/^TLSv/, 'TLS ') : undefined,
+  ].filter((p): p is string => p !== undefined)
+  return parts.length > 0 ? parts.join(' · ') : undefined
+}
+
+/**
+ * Cloudflare's bot-likelihood score (1 = almost certainly a bot, 99 = almost
+ * certainly human). Only populated when Bot Fight Mode / Bot Management is
+ * enabled on the zone, so it's frequently absent on the free plan.
+ */
+function botLine(
+  cf: IncomingRequestCfProperties | undefined
+): string | undefined {
+  const score = cf?.botManagement?.score
+  if (typeof score !== 'number') return undefined
+  const verified = cf?.botManagement?.verifiedBot
+    ? ' (verified bot)'
+    : score <= 30
+      ? ' 🤖'
+      : ''
+  return `${score}/99${verified}`
 }
 
 interface SlackField {
@@ -83,8 +141,11 @@ export async function sendClickNotification(
       : `📄 ${esc(link.filename)} (${esc(link.contentType)})`
 
   const referer = request.headers.get('Referer')
-  const network =
-    cf && typeof cf.asOrganization === 'string' ? cf.asOrganization : undefined
+  const acceptLanguage = request.headers.get('Accept-Language')
+  const network = networkLine(cf)
+  const connection = connectionLine(cf)
+  const bot = botLine(cf)
+  const map = mapLink(cf)
   const rawUserAgent = request.headers.get('User-Agent')
 
   const fields: SlackField[] = [
@@ -93,7 +154,11 @@ export async function sendClickNotification(
     field('IP address', `\`${esc(ip)}\``),
     field('Device', esc(formatUserAgent(rawUserAgent))),
   ]
+  if (map) fields.push(field('Map', map))
   if (network) fields.push(field('Network', esc(network)))
+  if (acceptLanguage) fields.push(field('Language', esc(acceptLanguage)))
+  if (connection) fields.push(field('Connection', esc(connection)))
+  if (bot) fields.push(field('Bot score', esc(bot)))
   if (referer) fields.push(field('Referrer', esc(referer)))
   if (rawUserAgent) fields.push(field('User-Agent', `\`${esc(rawUserAgent)}\``))
 

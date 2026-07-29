@@ -253,16 +253,28 @@ describe('redirect routing', () => {
 
 describe('click notifications', () => {
   /** A request carrying a User-Agent, IP and Cloudflare geo data. */
-  function clickReq(path: string): CfRequest {
+  function clickReq(
+    path: string,
+    options?: {
+      headers?: Record<string, string>
+      cf?: Record<string, unknown>
+    }
+  ): CfRequest {
     const req = new Request(new URL(path, 'https://jer.app').toString(), {
       headers: {
         'User-Agent':
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
         'CF-Connecting-IP': '203.0.113.5',
+        ...options?.headers,
       },
     })
     Object.defineProperty(req, 'cf', {
-      value: { city: 'Austin', region: 'Texas', country: 'US' },
+      value: {
+        city: 'Austin',
+        region: 'Texas',
+        country: 'US',
+        ...options?.cf,
+      },
       configurable: true,
     })
     return req as unknown as CfRequest
@@ -347,6 +359,51 @@ describe('click notifications', () => {
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
     ) // raw UA
     expect(rendered).toContain('example.com/dest') // destination
+
+    // None of this data was provided by the mock request, so their fields
+    // should be omitted entirely rather than showing as "undefined".
+    expect(rendered).not.toContain('Map')
+    expect(rendered).not.toContain('Network')
+    expect(rendered).not.toContain('Language')
+    expect(rendered).not.toContain('Connection')
+    expect(rendered).not.toContain('Bot score')
+  })
+
+  test('includes optional network/geo/protocol details when Cloudflare provides them', async () => {
+    await createLink(env.DB, {
+      path: 'q',
+      type: 'redirect',
+      url: 'https://example.com/dest',
+      status: 302,
+      notify: true,
+    })
+    const { ctx, settled } = makeCtx()
+    await serveLink(
+      clickReq('/q', {
+        headers: { 'Accept-Language': 'en-US,en;q=0.9' },
+        cf: {
+          timezone: 'America/Chicago',
+          latitude: '30.27130',
+          longitude: '-97.74260',
+          asOrganization: 'Google Cloud',
+          asn: 396747,
+          httpProtocol: 'HTTP/2',
+          tlsVersion: 'TLSv1.3',
+          botManagement: { score: 90, verifiedBot: false },
+        },
+      }),
+      env,
+      ctx
+    )
+    await settled()
+
+    const rendered = JSON.stringify(calls[0].body.blocks)
+    expect(rendered).toContain('America/Chicago') // timezone appended to location
+    expect(rendered).toContain('maps?q=30.27130,-97.74260') // map link
+    expect(rendered).toContain('Google Cloud · AS396747') // network
+    expect(rendered).toContain('en-US,en;q=0.9') // accept-language
+    expect(rendered).toContain('HTTP/2 · TLS 1.3') // connection
+    expect(rendered).toContain('90/99') // bot score
   })
 
   test('omits the ping when notifyPing is false', async () => {
