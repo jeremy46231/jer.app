@@ -1,5 +1,5 @@
 // A small, dependency-free User-Agent parser tailored for click notifications.
-// It is intentionally not exhaustive — it recognises the mainstream browsers,
+// It is intentionally not exhaustive; it recognises the mainstream browsers,
 // operating systems, and device classes and produces a clean human-readable
 // summary rather than a perfectly accurate breakdown.
 
@@ -39,9 +39,8 @@ function normalizeVersion(v: string | undefined): string | undefined {
   return cleaned || undefined
 }
 
-// Browsers pad versions with trailing zero components (Chrome's
-// "150.0.0.0", Firefox's occasional "128.0" patch release), which is just
-// noise. Drop trailing ".0" segments, e.g. "150.0.0.0" -> "150".
+// chrome pads versions like 150.0.0.0, firefox sometimes ships 128.0
+// trim the trailing zero segments, e.g. 150.0.0.0 -> 150
 function dropTrailingZeros(v: string | undefined): string | undefined {
   if (!v) return v
   const parts = v.split('.')
@@ -97,7 +96,7 @@ function parseBrowser(ua: string): {
 
 function parseOS(ua: string): { os?: string; osVersion?: string } {
   if (/\bWindows NT\b/.test(ua)) {
-    // Windows NT 10.0 covers both Windows 10 and 11 — the UA can't distinguish.
+    // Windows NT 10.0 covers both Windows 10 and 11; the UA can't distinguish.
     const nt = match(ua, /Windows NT ([\d.]+)/)
     return { os: 'Windows', osVersion: nt === '10' ? undefined : nt }
   }

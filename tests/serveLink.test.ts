@@ -360,8 +360,7 @@ describe('click notifications', () => {
     ) // raw UA
     expect(rendered).toContain('example.com/dest') // destination
 
-    // None of this data was provided by the mock request, so their fields
-    // should be omitted entirely rather than showing as "undefined".
+    // none of this data was on the mock request, fields should be omitted entirely
     expect(rendered).not.toContain('Map')
     expect(rendered).not.toContain('Network')
     expect(rendered).not.toContain('Language')
@@ -400,9 +399,9 @@ describe('click notifications', () => {
     const rendered = JSON.stringify(calls[0].body.blocks)
     expect(rendered).toContain('America/Chicago') // timezone appended to location
     expect(rendered).toContain('maps?q=30.27130,-97.74260') // map link
-    expect(rendered).toContain('Google Cloud · AS396747') // network
+    expect(rendered).toContain('Google Cloud (AS396747)') // network
     expect(rendered).toContain('en-US,en;q=0.9') // accept-language
-    expect(rendered).toContain('HTTP/2 · TLS 1.3') // connection
+    expect(rendered).toContain('HTTP/2, TLS 1.3') // connection
     expect(rendered).toContain('90/99') // bot score
   })
 

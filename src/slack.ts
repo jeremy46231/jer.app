@@ -5,9 +5,9 @@ import { formatUserAgent } from './userAgent'
 //
 // Configuration (all read from `env`, set them as Cloudflare secrets or in
 // `.dev.vars` for local dev):
-//   SLACK_BOT_TOKEN  — the bot token, starts with "xoxb-"
-//   SLACK_CHANNEL_ID — the channel to post in, e.g. "C0123456789"
-//   SLACK_USER_ID    — your own user id, e.g. "U0123456789" (used for @-pings)
+//   SLACK_BOT_TOKEN: the bot token, starts with "xoxb-"
+//   SLACK_CHANNEL_ID: the channel to post in, e.g. "C0123456789"
+//   SLACK_USER_ID: your own user id, e.g. "U0123456789" (used for @-pings)
 
 interface SlackEnv {
   SLACK_BOT_TOKEN?: string
@@ -29,7 +29,6 @@ function flagEmoji(cc: string | undefined): string {
   )
 }
 
-/** A string field that Cloudflare may or may not have been able to populate. */
 function str(value: unknown): string | undefined {
   return typeof value === 'string' && value.length > 0 ? value : undefined
 }
@@ -43,11 +42,11 @@ function locationLine(cf: IncomingRequestCfProperties | undefined): string {
     typeof cf.country === 'string' ? cf.country : undefined
   )
   const place = parts.length > 0 ? parts.join(', ') : 'Unknown'
-  const withTimezone = str(cf.timezone) ? `${place} · ${cf.timezone}` : place
+  const withTimezone = str(cf.timezone) ? `${place} (${cf.timezone})` : place
   return flag ? `${flag} ${withTimezone}` : withTimezone
 }
 
-/** A link to Google Maps for the request's approximate coordinates, if known. */
+// slack mrkdwn link syntax is <url|text>, not markdown's [text](url)
 function mapLink(
   cf: IncomingRequestCfProperties | undefined
 ): string | undefined {
@@ -57,35 +56,28 @@ function mapLink(
   return `<https://www.google.com/maps?q=${lat},${lon}|📍 Open in Maps>`
 }
 
-/** "Google Cloud · AS396747", omitting whichever half is missing. */
 function networkLine(
   cf: IncomingRequestCfProperties | undefined
 ): string | undefined {
   const org = str(cf?.asOrganization)
   const asn =
     typeof cf?.asn === 'number' && cf.asn > 0 ? `AS${cf.asn}` : undefined
-  const parts = [org, asn].filter((p): p is string => p !== undefined)
-  return parts.length > 0 ? parts.join(' · ') : undefined
+  if (org && asn) return `${org} (${asn})`
+  return org ?? asn
 }
 
-/** "HTTP/2 · TLS 1.3", omitting whichever half is missing. */
 function connectionLine(
   cf: IncomingRequestCfProperties | undefined
 ): string | undefined {
   const protocol = str(cf?.httpProtocol)
-  const tls = str(cf?.tlsVersion)
-  const parts = [
-    protocol,
-    tls ? tls.replace(/^TLSv/, 'TLS ') : undefined,
-  ].filter((p): p is string => p !== undefined)
-  return parts.length > 0 ? parts.join(' · ') : undefined
+  const tls = str(cf?.tlsVersion)?.replace(/^TLSv/, 'TLS ')
+  const parts = [protocol, tls].filter((p): p is string => p !== undefined)
+  return parts.length > 0 ? parts.join(', ') : undefined
 }
 
-/**
- * Cloudflare's bot-likelihood score (1 = almost certainly a bot, 99 = almost
- * certainly human). Only populated when Bot Fight Mode / Bot Management is
- * enabled on the zone, so it's frequently absent on the free plan.
- */
+// cloudflare's bot score: 1 means certainly a bot, 99 means certainly human
+// only populated with bot fight mode / bot management enabled on the zone,
+// so it's frequently absent on the free plan
 function botLine(
   cf: IncomingRequestCfProperties | undefined
 ): string | undefined {
@@ -109,7 +101,7 @@ function field(label: string, value: string): SlackField {
 }
 
 /**
- * Build and send the Slack notification for a click. Never throws — failures
+ * Build and send the Slack notification for a click. Never throws: failures
  * are logged so they can't break the redirect/download the user is waiting on.
  * Intended to be run via `ctx.waitUntil`.
  */
@@ -137,7 +129,7 @@ export async function sendClickNotification(
 
   const destination =
     link.type === 'redirect'
-      ? `→ ${esc(link.url)}`
+      ? `-> ${esc(link.url)}`
       : `📄 ${esc(link.filename)} (${esc(link.contentType)})`
 
   const referer = request.headers.get('Referer')
