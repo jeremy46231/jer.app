@@ -7,7 +7,7 @@ describe('parseUserAgent', () => {
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
     const p = parseUserAgent(ua)
     expect(p.browser).toBe('Chrome')
-    expect(p.browserVersion).toBe('126.0.0.0')
+    expect(p.browserVersion).toBe('126')
     expect(p.os).toBe('Windows')
     expect(p.osVersion).toBeUndefined() // NT 10.0 is ambiguous (Win 10/11)
     expect(p.device).toBe('Desktop')
@@ -61,7 +61,7 @@ describe('parseUserAgent', () => {
       'Mozilla/5.0 (X11; Linux x86_64; rv:127.0) Gecko/20100101 Firefox/127.0'
     const p = parseUserAgent(ua)
     expect(p.browser).toBe('Firefox')
-    expect(p.browserVersion).toBe('127.0')
+    expect(p.browserVersion).toBe('127')
     expect(p.os).toBe('Linux')
   })
 
@@ -74,13 +74,23 @@ describe('formatUserAgent', () => {
   test('omits the frozen macOS version', () => {
     const ua =
       'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Safari/605.1.15'
-    expect(formatUserAgent(ua)).toBe('Safari 17.4.1 on macOS · Desktop')
+    expect(formatUserAgent(ua)).toBe('🖥️ Safari 17.4.1 on macOS')
   })
 
   test('shows a real OS version', () => {
     const ua =
       'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1'
-    expect(formatUserAgent(ua)).toBe('Safari 17.4 on iOS 17.4 · Mobile')
+    expect(formatUserAgent(ua)).toBe('📱 Safari 17.4 on iOS 17.4')
+  })
+
+  test('drops trailing zero version components', () => {
+    const chrome =
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36'
+    expect(formatUserAgent(chrome)).toBe('🖥️ Chrome 150 on Windows')
+
+    const firefox =
+      'Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0'
+    expect(formatUserAgent(firefox)).toBe('🖥️ Firefox 128 on Linux')
   })
 
   test('handles an empty user agent', () => {
